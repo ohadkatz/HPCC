@@ -248,37 +248,37 @@ main(int argc, char *argv[]) {
   /*                      StarFFT                       */
   /* -------------------------------------------------- */
 
-  MPI_Barrier( MPI_COMM_WORLD );
+  // MPI_Barrier( MPI_COMM_WORLD );
 
-  BEGIN_IO( myRank, outFname, outputFile);
-  fprintf( outputFile, "Begin of StarFFT section.\n" );
-  END_IO( myRank, outputFile );
+  // BEGIN_IO( myRank, outFname, outputFile);
+  // fprintf( outputFile, "Begin of StarFFT section.\n" );
+  // END_IO( myRank, outputFile );
 
-  if (params.RunStarFFT) HPCC_StarFFT( &params );
+  // if (params.RunStarFFT) HPCC_StarFFT( &params );
 
-  time( &currentTime );
-  BEGIN_IO( myRank, outFname, outputFile);
-  fprintf( outputFile,"Current time (%ld) is %s\n",(long)currentTime,ctime(&currentTime));
-  fprintf( outputFile, "End of StarFFT section.\n" );
-  END_IO( myRank, outputFile );
+  // time( &currentTime );
+  // BEGIN_IO( myRank, outFname, outputFile);
+  // fprintf( outputFile,"Current time (%ld) is %s\n",(long)currentTime,ctime(&currentTime));
+  // fprintf( outputFile, "End of StarFFT section.\n" );
+  // END_IO( myRank, outputFile );
 
-  /* -------------------------------------------------- */
-  /*                      SingleFFT                     */
-  /* -------------------------------------------------- */
+  // /* -------------------------------------------------- */
+  // /*                      SingleFFT                     */
+  // /* -------------------------------------------------- */
 
-  MPI_Barrier( MPI_COMM_WORLD );
+  // MPI_Barrier( MPI_COMM_WORLD );
 
-  BEGIN_IO( myRank, outFname, outputFile);
-  fprintf( outputFile, "Begin of SingleFFT section.\n" );
-  END_IO( myRank, outputFile );
+  // BEGIN_IO( myRank, outFname, outputFile);
+  // fprintf( outputFile, "Begin of SingleFFT section.\n" );
+  // END_IO( myRank, outputFile );
 
-  if (params.RunSingleFFT) HPCC_SingleFFT( &params );
+  // if (params.RunSingleFFT) HPCC_SingleFFT( &params );
 
-  time( &currentTime );
-  BEGIN_IO( myRank, outFname, outputFile);
-  fprintf( outputFile,"Current time (%ld) is %s\n",(long)currentTime,ctime(&currentTime));
-  fprintf( outputFile, "End of SingleFFT section.\n" );
-  END_IO( myRank, outputFile );
+  // time( &currentTime );
+  // BEGIN_IO( myRank, outFname, outputFile);
+  // fprintf( outputFile,"Current time (%ld) is %s\n",(long)currentTime,ctime(&currentTime));
+  // fprintf( outputFile, "End  of SingleFFT section.\n" );
+  // END_IO( myRank, outputFile );
 
   /* -------------------------------------------------- */
   /*                  Latency/Bandwidth                 */

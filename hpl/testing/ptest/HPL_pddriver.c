@@ -1,4 +1,4 @@
-/* 
+ /* 
  * -- High Performance Computing Linpack Benchmark (HPL)                
  *    HPL - 2.0 - September 10, 2008                          
  *    Antoine P. Petitet                                                
@@ -69,6 +69,7 @@ int HPL_main( ARGC, ARGV, rdata, failure )
    char                       * * ARGV;
    HPL_RuntimeData            * rdata;
    int *failure;
+
 #endif
 {
 /* 
@@ -89,8 +90,13 @@ int HPL_main( ARGC, ARGV, rdata, failure )
                               qval  [HPL_MAX_PARAM],
                               nbmval[HPL_MAX_PARAM],
                               ndvval[HPL_MAX_PARAM],
-                              ndhval[HPL_MAX_PARAM];
+                              ndhval[HPL_MAX_PARAM],
+                              /*AUTHOR= OHAD KATZ
+                              * Added 2 new arrays
+                              */
 
+                              nsize[HPL_MAX_PARAM],
+                              nrep[HPL_MAX_PARAM];
    HPL_T_FACT                 pfaval[HPL_MAX_PARAM],
                               rfaval[HPL_MAX_PARAM];
 
@@ -151,11 +157,14 @@ int HPL_main( ARGC, ARGV, rdata, failure )
  * 0            U  in (0=transposed,1=no-transposed) form
  * 1            Equilibration (0=no,1=yes)
  * 8            memory alignment in double (> 0)
+ * ADDED[]      Nsize
+ * ADDED[]      Nrep
+ * 
  */
    HPL_pdinfo( &test, &ns, nval, &nbs, nbval, &pmapping, &npqs, pval, qval,
                &npfs, pfaval, &nbms, nbmval, &ndvs, ndvval, &nrfs, rfaval,
                &ntps, topval, &ndhs, ndhval, &fswap, &tswap, &L1notran,
-               &Unotran, &equil, &align );
+               &Unotran, &equil, &align, nsize,nrep);
 /*
  * Loop over different process grids - Define process grid. Go to bottom
  * of process grid loop if this case does not use my process.

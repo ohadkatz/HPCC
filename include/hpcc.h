@@ -57,7 +57,7 @@ typedef struct {
    HPL_T_TOP                  topval[HPL_MAX_PARAM];
    HPL_T_FACT                 rpfa;
    HPL_T_SWAP                 fswap;
-   int ns, nbs, npqs, npfs, nbms, ndvs, nrfs, ntps, ndhs, tswap, L1notran, Unotran, equil, align;
+   int ns, nbs, npqs, npfs, nbms, ndvs, nrfs, ntps, ndhs, tswap, L1notran, Unotran, equil, align, nsize, nrep;
 
   /* HPCC section */
   char inFname[256 + 1], outFname[256 + 1];
@@ -134,7 +134,7 @@ HPCC_Defaults(HPL_T_test *TEST, int *NS, int *N,
               int *NRFS, HPL_T_FACT *RF,
               int *NTPS, HPL_T_TOP *TP,
               int *NDHS, int *DH,
-              HPL_T_SWAP *FSWAP, int *TSWAP, int *L1NOTRAN, int *UNOTRAN, int *EQUIL, int *ALIGN, MPI_Comm comm);
+              HPL_T_SWAP *FSWAP, int *TSWAP, int *L1NOTRAN, int *UNOTRAN, int *EQUIL, int *ALIGN,int *NSIZE, int *NREP, MPI_Comm comm);
 
 extern int HPL_main(int ARGC, char **ARGV, HPL_RuntimeData *rdata, int *failure);
 extern float HPL_slamch (const HPL_T_MACH);
