@@ -40,10 +40,13 @@ ReadInts(char *buf, int n, int *val) {
 
 static int
 HPCC_InitHPL(HPCC_Params *p) {
+  /* Author= Ohad Katz
+  *  Added &p->matrices and &p-> repitions
+  */
   HPL_pdinfo( &p->test, &p->ns, p->nval, &p->nbs, p->nbval, &p->porder, &p->npqs, p->pval,
               p->qval, &p->npfs, p->pfaval, &p->nbms, p->nbmval, &p->ndvs, p->ndvval, &p->nrfs,
               p->rfaval, &p->ntps, p->topval, &p->ndhs, p->ndhval, &p->fswap, &p->tswap,
-              &p->L1notran, &p->Unotran, &p->equil, &p->align );
+              &p->L1notran, &p->Unotran, &p->equil, &p->align, /*new*/&p->nsize,&p->nrep );
 
   if (p->test.thrsh <= 0.0) p->Failure = 1;
 
@@ -78,8 +81,12 @@ icopy(int n, int *src, int sinc, int *dst, int dinc) {
 int
 HPCC_InputFileInit(HPCC_Params *params) {
   int myRank, commSize;
-  int i, j, n, ioErr, lastConfigLine = 32, line, rv, maxHPLn;
+  /*Changed last config line to 34, up from 32 to allow 2 new inputs*/
+  int i, j, n, ioErr, lastConfigLine = 34, line, rv, maxHPLn;
   char buf[82]; int nbuf = 82;
+  /* Two new int array input, Matrices & Repititions */
+  int Matrix[HPL_MAX_PARAM];
+  int Repition[HPL_MAX_PARAM];
   FILE *f, *outputFile;
   MPI_Comm comm = MPI_COMM_WORLD;
 
@@ -735,7 +742,7 @@ HPCC_Defaults(HPL_T_test *TEST, int *NS, int *N,
               int *NRFS, HPL_T_FACT *RF,
               int *NTPS, HPL_T_TOP *TP,
               int *NDHS, int *DH,
-              HPL_T_SWAP *FSWAP, int *TSWAP, int *L1NOTRAN, int *UNOTRAN, int *EQUIL, int *ALIGN, MPI_Comm comm) {
+              HPL_T_SWAP *FSWAP, int *TSWAP, int *L1NOTRAN, int *UNOTRAN, int *EQUIL, int *ALIGN,int *NSIZE, int *NREP, MPI_Comm comm) {
   int nb = 80;
   double memFactor = 0.8;
 

@@ -140,6 +140,11 @@ STDC_ARGS( (
    int *,
    int *,
    int *,
+   int *,
+   /*NEW
+   * AUTHOR= OHAD KATZ
+   */
+   int *,
    int *
 ) );
 void                             HPL_pdtest

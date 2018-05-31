@@ -3,6 +3,9 @@
  */
 
 #include <hpcc.h>
+static int LastElement(int *arr){
+  return sizeof(arr)/sizeof(arr[0])-1;
+}
 
 /* Generates random matrix with entries between 0.0 and 1.0 */
 static void
@@ -58,6 +61,11 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
   long l_n;
   FILE *outFile;
   int seed_a, seed_b, seed_c, seed_x;
+  int Nsize[20];
+  int Nrep[20];
+  int lastNsize= LastElement(Nsize);
+  int lastRep= LastElement(Nrep);
+  
 
   if (doIO) {
     outFile = fopen( params->outFname, "a" );
@@ -67,7 +75,28 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
       return 1;
     }
   }
+  /*
+  * AUTHOR= OHAD KATZ
+  * 
+  * Added functionality such that DGEMM takes in values from the array of matrices
+  * and the amount of repitions and calculates matrix multiplication using DGEMM
+  * algorithm and reports it out.
+  * 
+  * After this is done, the code runs DGEMM like normal to assess the differences 
+  * between the two methods.
+  */
 
+  /* 
+   * SKELETON: 
+   *  FOR I= NSIZE[0], I<= NSIZE[-1], I++:
+   *    START TIMING
+   *      FOR I= NREP[0], I<= NREP[-1], I++:
+   *         n= NSIZE[0]
+   *         MATRIX MATH FROM DGEMM;
+   *   Output results
+   *   Output Time!!!
+   *   LAST ELEMENT OF ARRAY = arr[sizeof(arr)/sizeof(arr[0]) - 1];
+   */
   n = (int)(sqrt( params->HPLMaxProcMem / sizeof(double) / 3 + 0.25 ) - 0.5);
   if (n < 0) n = -n; /* if 'n' has overflown an integer */
   l_n = n;
