@@ -97,7 +97,7 @@ void HPL_pdinfo
 )
 #else
 void HPL_pdinfo
-( TEST, NS, N, NBS, NB, PMAPPIN, NPQS, P, Q, NPFS, PF, NBMS, NBM, NDVS, NDV, NRFS, RF, NTPS, TP, NDHS, DH, FSWAP, TSWAP, L1NOTRAN, UNOTRAN, EQUIL, ALIGN )
+( TEST, NS, N, NBS, NB, PMAPPIN, NPQS, P, Q, NPFS, PF, NBMS, NBM, NDVS, NDV, NRFS, RF, NTPS, TP, NDHS, DH, FSWAP, TSWAP, L1NOTRAN, UNOTRAN, EQUIL, ALIGN, NSIZE, NREP )
    HPL_T_test *                     TEST;
    int *                            NS;
    int *                            N;
@@ -298,7 +298,7 @@ void HPL_pdinfo
    char                       file[HPL_LINE_MAX], line[HPL_LINE_MAX],
                               auth[HPL_LINE_MAX], num [HPL_LINE_MAX],
                               /*OHAD KATZ, Added new matrices for size and repetitions*/
-                              matrices[HPL_LINE_MAX];
+                              matrices[HPL_LINE_MAX], repetitions[HPL_LINE_MAX];
    FILE                       * infp;
    int                        * iwork;
    char                       * lineptr;
@@ -647,16 +647,25 @@ void HPL_pdinfo
  */
       
       (void) fgets( line, HPL_LINE_MAX - 2, infp );
-      (void) sscanf( line, "%s", num ); *NSIZE= atoi( num );
-     
+      (void) sscanf( line, "%s", matrices ); NSIZE[0]= atoi( matrices);
+      int total= sizeof(NSIZE[0]);
+    
+      for (int i = 1; i< HPL_MAX_PARAM; i++){
+            (void) sscanf( line+total , "%s", matrices ); NSIZE[i]= atoi( matrices);
+            total+=sizeof(NSIZE[i]);
+      }
+      
 /*
  * Matrix repition of size needed(>=0) (NREP)
  */
       (void) fgets( line, HPL_LINE_MAX - 2, infp );
-      (void) sscanf( line, "%s", num ); *NREP = atoi( num );
-   
-
-
+      (void) sscanf( line, "%s", matrices ); NREP[0]= atoi( matrices);
+      int totality = sizeof(NREP[0])-2;
+      for (int i = 1; i< HPL_MAX_PARAM; i++){
+            (void) sscanf( line+totality, "%s", matrices ); NREP[i]= atoi(matrices);
+            totality +=sizeof(NREP[i]);
+      }
+  
 /*
  * Close input file
  */
@@ -738,7 +747,7 @@ label_error:
       *NDHS     = iwork[ 9]; *TSWAP = iwork[10]; *L1NOTRAN = iwork[11];
       *UNOTRAN  = iwork[12]; *EQUIL = iwork[13]; *ALIGN    = iwork[14];
 
-      iwork[15]=*NSIZE;     iwork[16] = *NREP;
+      *NSIZE = iwork[15];     *NREP = iwork[16];
    }
    if( iwork ) free( iwork );
 /*
@@ -1183,24 +1192,26 @@ label_error:
 
       
 /*ADDED TO INPUT*/
-      HPL_fprintf( TEST->outfp, "\n%s\n", "NEXT TESTS DESIGNED BY OHAD KATZ, CCR");
+
  /*
  * NSIZE (AUTHOR = OHAD KATZ)
- */
-      HPL_fprintf( TEST-> outfp,      "\nNSIZE  : %d Matrices",
-                   *NSIZE );
-
-      //HPL_fprintf( TEST->outfp, "\n\n");
-
+ *    
+ */   
+      printf("%d %d \n", *NSIZE, sizeof(NREP));
+      for(i =0; i< sizeof(NSIZE)-3; i++){
+            HPL_fprintf( TEST-> outfp,      "\nNSIZE Mat %d : %d matrices",
+                   i+1, NSIZE[i]);
+      }
+    
 /*
  * NREP (AUTHOR = OHAD KATZ)
  */
 
-      HPL_fprintf( TEST-> outfp,      "\nNREP   : %d Repetition of Matrices",
-                   *NREP);
-
+      for(i =0; i< sizeof(NREP)-5; i++){
+            HPL_fprintf( TEST-> outfp,      "\nNREP for Mat %d : %d matrices",
+                   i+1, NREP[i]);
+      }
       HPL_fprintf( TEST->outfp, "\n\n");
-
 
 /*
  * For testing only

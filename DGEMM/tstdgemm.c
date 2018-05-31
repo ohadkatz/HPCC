@@ -3,6 +3,8 @@
  */
 
 #include <hpcc.h>
+
+
 static int LastElement(int *arr){
   return sizeof(arr)/sizeof(arr[0])-1;
 }
@@ -55,7 +57,7 @@ dnrm_inf(int m, int n, double *a, int lda) {
 
 int
 HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufailure) {
-  int n, lda, ldb, ldc, failure = 1;
+  int i,j, n, lda, ldb, ldc, failure = 1;
   double *a, *b, *c, *x, *y, *z, alpha, beta, sres, cnrm, xnrm;
   double Gflops = 0.0, dn, t0, t1;
   long l_n;
@@ -75,6 +77,7 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
       return 1;
     }
   }
+  
   /*
   * AUTHOR= OHAD KATZ
   * 
@@ -97,7 +100,13 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
    *   Output Time!!!
    *   LAST ELEMENT OF ARRAY = arr[sizeof(arr)/sizeof(arr[0]) - 1];
    */
-  n = (int)(sqrt( params->HPLMaxProcMem / sizeof(double) / 3 + 0.25 ) - 0.5);
+  // for( i = 0; i < sizeof(params->nsize); i++){
+    
+  //   for( j = 0; j < sizeof(params->nrep);i++){
+  //       n=(int) (sqrt (params->nsize[i]/ sizeof(double)/3+.25)-.5);
+  //   }
+  // }
+  n = (int)(sqrt(params->HPLMaxProcMem / sizeof(double) / 3 + 0.25 ) - 0.5);
   if (n < 0) n = -n; /* if 'n' has overflown an integer */
   l_n = n;
   lda = ldb = ldc = n;

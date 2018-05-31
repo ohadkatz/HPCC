@@ -94,9 +94,9 @@ int HPL_main( ARGC, ARGV, rdata, failure )
                               /*AUTHOR= OHAD KATZ
                               * Added 2 new arrays
                               */
-
                               nsize[HPL_MAX_PARAM],
                               nrep[HPL_MAX_PARAM];
+
    HPL_T_FACT                 pfaval[HPL_MAX_PARAM],
                               rfaval[HPL_MAX_PARAM];
 

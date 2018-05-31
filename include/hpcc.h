@@ -50,14 +50,16 @@ typedef struct {
                               qval  [HPL_MAX_PARAM],
                               nbmval[HPL_MAX_PARAM],
                               ndvval[HPL_MAX_PARAM],
-                              ndhval[HPL_MAX_PARAM];
+                              ndhval[HPL_MAX_PARAM],
+                              nsize[HPL_MAX_PARAM],
+                              nrep[HPL_MAX_PARAM];
    HPL_T_ORDER                porder;
    HPL_T_FACT                 pfaval[HPL_MAX_PARAM],
                               rfaval[HPL_MAX_PARAM];
    HPL_T_TOP                  topval[HPL_MAX_PARAM];
    HPL_T_FACT                 rpfa;
    HPL_T_SWAP                 fswap;
-   int ns, nbs, npqs, npfs, nbms, ndvs, nrfs, ntps, ndhs, tswap, L1notran, Unotran, equil, align, nsize, nrep;
+   int ns, nbs, npqs, npfs, nbms, ndvs, nrfs, ntps, ndhs, tswap, L1notran, Unotran, equil, align;
 
   /* HPCC section */
   char inFname[256 + 1], outFname[256 + 1];
@@ -91,6 +93,8 @@ typedef struct {
   double MPIFFTtimingsForward[MPIFFT_TIMING_COUNT], MPIFFTtimingsBackward[MPIFFT_TIMING_COUNT];
 
   size_t HPLMaxProcMem;
+  int *NSIZE;
+  int *NREP;
   int HPLMaxProc, HPLMinProc;
   int RunHPL, RunStarDGEMM, RunSingleDGEMM,
     RunPTRANS, RunStarStream, RunSingleStream,
