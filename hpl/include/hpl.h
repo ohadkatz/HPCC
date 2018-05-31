@@ -91,7 +91,15 @@
 #include "hpl_pmatgen.h"
 #include "hpl_ptest.h"
 
+
 #endif
+
+
+typedef struct {
+    int *nsize;
+    int *nrep;
+
+}HPCC_MATRICES;
 /*
  * End of hpl.h
  */
