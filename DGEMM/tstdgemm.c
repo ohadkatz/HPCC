@@ -100,99 +100,106 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
    *   Output Time!!!
    *   LAST ELEMENT OF ARRAY = arr[sizeof(arr)/sizeof(arr[0]) - 1];
    */
-  
-  for(i=0;i<sizeof(params->NSIZE);i++){
-    int repetitions= params->NREP[i];
-    for (j = 0 ; j < repetitions; j++){
-      n = (int)(sqrt(params->nsizeval[i] / sizeof(double) / 3 + 0.25 ) - 0.5); 
-    
 
-      //n = (int)(sqrt(params->HPLMaxProcMem / sizeof(double) / 3 + 0.25 ) - 0.5);
-      if (n < 0) n = -n; /* if 'n' has overflown an integer */
-      l_n = n;
-      lda = ldb = ldc = n;
-
-      a = HPCC_XMALLOC( double, l_n * l_n );
-      b = HPCC_XMALLOC( double, l_n * l_n );
-      c = HPCC_XMALLOC( double, l_n * l_n );
-
-      x = HPCC_XMALLOC( double, l_n );
-      y = HPCC_XMALLOC( double, l_n );
-      z = HPCC_XMALLOC( double, l_n );
-
-      if (! a || ! b || ! c || ! x || ! y || ! z) {
-        goto comp_end;
-      }
-
-      seed_a = (int)time( NULL );
-      dmatgen( n, n, a, n, seed_a );
-
-      seed_b = (int)time( NULL );
-      dmatgen( n, n, b, n, seed_b );
-
-      seed_c = (int)time( NULL );
-      dmatgen( n, n, c, n, seed_c );
-
-      seed_x = (int)time( NULL );
-      dmatgen( n, 1, x, n, seed_x );
-
-      alpha = a[n / 2];
-      beta  = b[n / 2];
-
-      t0 = MPI_Wtime();
-      HPL_dgemm( HplColumnMajor, HplNoTrans, HplNoTrans, n, n, n, alpha, a, n, b, n, beta, c, n );
-      t1 = MPI_Wtime();
-
-      t1 -= t0;
-      dn = (double)n;
-      if (t1 != 0.0 && t1 != -0.0)
-        Gflops = 2.0e-9 * dn * dn * dn / t1;
-      else
-        Gflops = 0.0;
-
-      cnrm = dnrm_inf( n, n, c, n );
-      xnrm = dnrm_inf( n, 1, x, n );
-
-      /* y <- c*x */
-      HPL_dgemv( HplColumnMajor, HplNoTrans, n, n, 1.0, c, ldc, x, 1, 0.0, y, 1 );
-
-      /* z <- b*x */
-      HPL_dgemv( HplColumnMajor, HplNoTrans, n, n, 1.0, b, ldb, x, 1, 0.0, z, 1 );
-
-      /* y <- alpha * a * z - y */
-      HPL_dgemv( HplColumnMajor, HplNoTrans, n, n, alpha, a, lda, z, 1, -1.0, y, 1 );
-
-      dmatgen( n, n, c, n, seed_c );
-
-      /* y <- beta * c_orig * x + y */
-      HPL_dgemv( HplColumnMajor, HplNoTrans, n, n, beta, c, ldc, x, 1, 1.0, y, 1 );
-
-      sres = dnrm_inf( n, 1, y, n ) / cnrm / xnrm / n / HPL_dlamch( HPL_MACH_EPS );
-
-      if (doIO) fprintf( outFile, "Scaled residual: %g\n", sres );
-
-      if (sres < params->test.thrsh)
-        failure = 0;
-
-      comp_end:
-
-      if (z) HPCC_free( z );
-      if (y) HPCC_free( y );
-      if (x) HPCC_free( x );
-      if (c) HPCC_free( c );
-      if (b) HPCC_free( b );
-      if (a) HPCC_free( a );
-
-      if (doIO) {
-        fflush( outFile );
-        fclose( outFile );
-      }
-
-      if (UGflops) *UGflops = Gflops;
-      if (Un) *Un = n;
-      if (Ufailure) *Ufailure = failure;
+  int matrix = 0;
+  printf("%d\n%d\n", params->NSIZE[0],  params->nsizeval[0]);
+  while (params->nsizeval[matrix]!= NULL){
+    int MatSize = params->NSIZE[i];
+    for(i=0;i< MatSize ;i++){
+      int repetitions= params->NREP[i];
+      for (j = 0 ; j < repetitions; j++){
+        n = params->NSIZE[i]; 
       
-      return 0;
+
+        // n = (int)(sqrt(params->HPLMaxProcMem / sizeof(double) / 3 + 0.25 ) - 0.5);
+        if (n < 0) n = -n; /* if 'n' has overflown an integer */
+        l_n = n;
+        lda = ldb = ldc = n;
+
+        a = HPCC_XMALLOC( double, l_n * l_n );
+        b = HPCC_XMALLOC( double, l_n * l_n );
+        c = HPCC_XMALLOC( double, l_n * l_n );
+
+        x = HPCC_XMALLOC( double, l_n );
+        y = HPCC_XMALLOC( double, l_n );
+        z = HPCC_XMALLOC( double, l_n );
+
+        if (! a || ! b || ! c || ! x || ! y || ! z) {
+          goto comp_end;
+        }
+
+        seed_a = (int)time( NULL );
+        dmatgen( n, n, a, n, seed_a );
+
+        seed_b = (int)time( NULL );
+        dmatgen( n, n, b, n, seed_b );
+
+        seed_c = (int)time( NULL );
+        dmatgen( n, n, c, n, seed_c );
+
+        seed_x = (int)time( NULL );
+        dmatgen( n, 1, x, n, seed_x );
+
+        alpha = a[n / 2];
+        beta  = b[n / 2];
+
+        t0 = MPI_Wtime();
+        HPL_dgemm( HplColumnMajor, HplNoTrans, HplNoTrans, n, n, n, alpha, a, n, b, n, beta, c, n );
+        t1 = MPI_Wtime();
+
+        t1 -= t0;
+        dn = (double)n;
+        if (t1 != 0.0 && t1 != -0.0)
+          Gflops = 2.0e-9 * dn * dn * dn / t1;
+        else
+          Gflops = 0.0;
+
+        cnrm = dnrm_inf( n, n, c, n );
+        xnrm = dnrm_inf( n, 1, x, n );
+
+        /* y <- c*x */
+        HPL_dgemv( HplColumnMajor, HplNoTrans, n, n, 1.0, c, ldc, x, 1, 0.0, y, 1 );
+
+        /* z <- b*x */
+        HPL_dgemv( HplColumnMajor, HplNoTrans, n, n, 1.0, b, ldb, x, 1, 0.0, z, 1 );
+
+        /* y <- alpha * a * z - y */
+        HPL_dgemv( HplColumnMajor, HplNoTrans, n, n, alpha, a, lda, z, 1, -1.0, y, 1 );
+
+        dmatgen( n, n, c, n, seed_c );
+
+        /* y <- beta * c_orig * x + y */
+        HPL_dgemv( HplColumnMajor, HplNoTrans, n, n, beta, c, ldc, x, 1, 1.0, y, 1 );
+
+        sres = dnrm_inf( n, 1, y, n ) / cnrm / xnrm / n / HPL_dlamch( HPL_MACH_EPS );
+
+        if (doIO) fprintf( outFile, "Scaled residual: %g\n", sres );
+
+        if (sres < params->test.thrsh)
+          failure = 0;
+
+        comp_end:
+
+        if (z) HPCC_free( z );
+        if (y) HPCC_free( y );
+        if (x) HPCC_free( x );
+        if (c) HPCC_free( c );
+        if (b) HPCC_free( b );
+        if (a) HPCC_free( a );
+
+        if (doIO) {
+          fflush( outFile );
+          fclose( outFile );
+        }
+
+        if (UGflops) *UGflops = Gflops;
+        if (Un) *Un = n;
+        if (Ufailure) *Ufailure = failure;
+        
+        
+      }
     }
+    matrix++;
   }
+  return 0;
 }
