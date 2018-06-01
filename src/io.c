@@ -21,6 +21,7 @@ ReadInts(char *buf, int n, int *val) {
   int i, j;
 
   for (j = i = 0; i < n; i++) {
+    
     if (sscanf( buf + j, "%d", val + i ) != 1) {
       i--;
       break;
@@ -34,19 +35,19 @@ ReadInts(char *buf, int n, int *val) {
       break;
     }
   }
-
-  return i + 1;
+  
+  return i+1;
 }
 
 static int
 HPCC_InitHPL(HPCC_Params *p) {
   /* Author= Ohad Katz
-  *  Added &p->matrices and &p-> repitions
+  *  Added &p->matrices and &p-> repetitions
   */
   HPL_pdinfo( &p->test, &p->ns, p->nval, &p->nbs, p->nbval, &p->porder, &p->npqs, p->pval,
               p->qval, &p->npfs, p->pfaval, &p->nbms, p->nbmval, &p->ndvs, p->ndvval, &p->nrfs,
               p->rfaval, &p->ntps, p->topval, &p->ndhs, p->ndhval, &p->fswap, &p->tswap,
-              &p->L1notran, &p->Unotran, &p->equil, &p->align, /*new*/&p->nsize,&p->nrep );
+              &p->L1notran, &p->Unotran, &p->equil, &p->align, /*new*/&p->nsizeval,&p->nrepval );
 
   if (p->test.thrsh <= 0.0) p->Failure = 1;
 
@@ -82,11 +83,8 @@ int
 HPCC_InputFileInit(HPCC_Params *params) {
   int myRank, commSize;
   /*Changed last config line to 34, up from 32 to allow 2 new inputs*/
-  int i, j, n, ioErr, lastConfigLine = 34, line, rv, maxHPLn;
+  int i, j, n, ioErr, lastConfigLine = 32, line, rv, maxHPLn;
   char buf[82]; int nbuf = 82;
-  /* Two new int array input, Matrices & Repititions */
-  int Matrix[HPL_MAX_PARAM];
-  int Repition[HPL_MAX_PARAM];
   FILE *f, *outputFile;
   MPI_Comm comm = MPI_COMM_WORLD;
 
@@ -101,10 +99,10 @@ HPCC_InputFileInit(HPCC_Params *params) {
     }
 
     /* skip irrelevant lines in config file */
-            for (line = 0; line < lastConfigLine; line++)
-              if (! fgets( buf, nbuf, f )) break;
+    for (line = 0; line < lastConfigLine; line++)
+        if (! fgets( buf, nbuf, f )) break;
 
-            if (line < lastConfigLine) { /* if didn't read all the required lines */
+    if (line < lastConfigLine) { /* if didn't read all the required lines */
       ioErr = 1;
       goto ioEnd;
     }
@@ -113,6 +111,7 @@ HPCC_InputFileInit(HPCC_Params *params) {
     line++;
     fgets( buf, nbuf, f );
     rv = sscanf( buf, "%d", &n );
+  
     if (rv != 1 || n < 0) { /* parse error or negative value*/
       n = 0;
       BEGIN_IO(myRank, params->outFname, outputFile);
@@ -124,11 +123,12 @@ HPCC_InputFileInit(HPCC_Params *params) {
     line++;
     fgets( buf, nbuf, f );
     ReadInts( buf, n, params->PTRANSnval );
-
+    
     /* find the largest matrix for HPL */
     maxHPLn = params->nval[iiamax( params->ns, params->nval, 1 )];
-
+  
     for (j = i = 0; i < n; i++) {
+    
       /* if memory for PTRANS is at least 90% of what's used for HPL */
       if (params->PTRANSnval[i] >= 0.9486 * maxHPLn * 0.5) {
         params->PTRANSnval[j] = params->PTRANSnval[i];
@@ -136,11 +136,14 @@ HPCC_InputFileInit(HPCC_Params *params) {
       }
     }
     n = j; /* only this many entries use enough memory */
-
+   
     /* copy matrix sizes from HPL, divide by 2 so both PTRANS matrices (plus "work" arrays) occupy
        as much as HPL's one */
-    for (i = 0; i < params->ns; i++)
+    for (i = 0; i < params->ns; i++){
+      ;
       params->PTRANSnval[i + n] = params->nval[i] / 2;
+    
+    }
     params->PTRANSns = n + params->ns;
 
     /* Get values of block sizes */
@@ -157,10 +160,24 @@ HPCC_InputFileInit(HPCC_Params *params) {
 
     line++;
     fgets( buf, nbuf, f );
+    
     ReadInts( buf, n, params->PTRANSnbval );
-
+    printf("%d\n", sizeof(params->PTRANSnbval));
     icopy( params->nbs, params->nbval, 1, params->PTRANSnbval + n, 1 );
     params->PTRANSnbs = n + params->nbs;
+    
+    /* OHAD KATZ */
+
+    /*Pull matrix sizes needed for DGEMM*/
+    line++;
+    fgets( buf, nbuf, f );
+    ReadInts( buf, n, params->NSIZE );
+    printf("%d\n", sizeof(params->NSIZE));
+
+    /*Pull # of repetitions needed for DGEMM*/
+    line++;
+    fgets( buf, nbuf, f );
+    ReadInts( buf, n, params->NREP );
 
     ioErr = 0;
     ioEnd:
@@ -272,8 +289,8 @@ HPCC_Init(HPCC_Params *params) {
   HPCC_InputFileInit( params );
 
   params->RunHPL = 0;
-  params->RunStarDGEMM = 0;
-  params->RunSingleDGEMM = 0;
+  params->RunStarDGEMM = 1;
+  params->RunSingleDGEMM = 1;
   params->RunPTRANS = 0;
   params->RunStarStream = 0;
   params->RunSingleStream = 0;
@@ -287,12 +304,12 @@ HPCC_Init(HPCC_Params *params) {
   params->RunMPIFFT = 0;
   params->RunStarFFT = 0;
   params->RunSingleFFT = 0;
-  params->RunHPL = params->RunStarDGEMM = params->RunSingleDGEMM =
-  params->RunPTRANS = params->RunStarStream = params->RunSingleStream =
-  params->RunMPIRandomAccess_LCG = params->RunStarRandomAccess_LCG = params->RunSingleRandomAccess_LCG =
-  params->RunMPIRandomAccess = params->RunStarRandomAccess = params->RunSingleRandomAccess =
-  params->RunMPIFFT = params->RunStarFFT = params->RunSingleFFT =
-  params->RunLatencyBandwidth = 1;
+  // params->RunHPL = params->RunStarDGEMM = params->RunSingleDGEMM =
+  // params->RunPTRANS = params->RunStarStream = params->RunSingleStream =
+  // params->RunMPIRandomAccess_LCG = params->RunStarRandomAccess_LCG = params->RunSingleRandomAccess_LCG =
+  // params->RunMPIRandomAccess = params->RunStarRandomAccess = params->RunSingleRandomAccess =
+  // params->RunMPIFFT = params->RunStarFFT = params->RunSingleFFT =
+  // params->RunLatencyBandwidth = 1;
 
   params->MPIRandomAccess_LCG_GUPs =
   params->MPIRandomAccess_GUPs = params->StarGUPs = params->SingleGUPs =
