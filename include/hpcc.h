@@ -51,21 +51,26 @@ typedef struct {
                               nbmval[HPL_MAX_PARAM],
                               ndvval[HPL_MAX_PARAM],
                               ndhval[HPL_MAX_PARAM],
-                              nsize[HPL_MAX_PARAM],
-                              nrep[HPL_MAX_PARAM];
+                              nsizeval[HPL_MAX_PARAM],
+                              nrepval[HPL_MAX_PARAM];
    HPL_T_ORDER                porder;
    HPL_T_FACT                 pfaval[HPL_MAX_PARAM],
                               rfaval[HPL_MAX_PARAM];
    HPL_T_TOP                  topval[HPL_MAX_PARAM];
    HPL_T_FACT                 rpfa;
    HPL_T_SWAP                 fswap;
-   int ns, nbs, npqs, npfs, nbms, ndvs, nrfs, ntps, ndhs, tswap, L1notran, Unotran, equil, align;
+   int ns, nbs, npqs, npfs, nbms, ndvs, nrfs, ntps, ndhs, tswap, L1notran, Unotran, equil, align,nsize,nrep;
 
   /* HPCC section */
   char inFname[256 + 1], outFname[256 + 1];
   int PTRANSns, PTRANSnval[2 * HPL_MAX_PARAM];
   int PTRANSnbs, PTRANSnbval[2 * HPL_MAX_PARAM];
   int PTRANSnpqs, PTRANSpval[2 * HPL_MAX_PARAM], PTRANSqval[2 * HPL_MAX_PARAM];
+  /*ADDED NSIZE , NREP*/
+  int NSIZE[HPL_MAX_PARAM];
+  int NREP[HPL_MAX_PARAM];
+  int Nsize;
+  int Nrep;
   double MPIRandomAccess_LCG_GUPs, MPIRandomAccess_GUPs, Star_LCG_GUPs, Single_LCG_GUPs, StarGUPs, SingleGUPs,
     MPIRandomAccess_ErrorsFraction, MPIRandomAccess_time, MPIRandomAccess_CheckTime,
     MPIRandomAccess_TimeBound,
@@ -93,8 +98,7 @@ typedef struct {
   double MPIFFTtimingsForward[MPIFFT_TIMING_COUNT], MPIFFTtimingsBackward[MPIFFT_TIMING_COUNT];
 
   size_t HPLMaxProcMem;
-  int *NSIZE;
-  int *NREP;
+  
   int HPLMaxProc, HPLMinProc;
   int RunHPL, RunStarDGEMM, RunSingleDGEMM,
     RunPTRANS, RunStarStream, RunSingleStream,

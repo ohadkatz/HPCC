@@ -646,25 +646,25 @@ void HPL_pdinfo
  * Matrix input of specific sizes needed(>=0) (NSIZE)
  */
       
-      (void) fgets( line, HPL_LINE_MAX - 2, infp );
-      (void) sscanf( line, "%s", matrices ); NSIZE[0]= atoi( matrices);
-      int total= sizeof(NSIZE[0]);
+//       (void) fgets( line, HPL_LINE_MAX - 2, infp );
+//       (void) sscanf( line, "%s", matrices ); NSIZE[0]= atoi( matrices);
+//       int total= sizeof(NSIZE[0]);
     
-      for (int i = 1; i< HPL_MAX_PARAM; i++){
-            (void) sscanf( line+total , "%s", matrices ); NSIZE[i]= atoi( matrices);
-            total+=sizeof(NSIZE[i]);
-      }
+//       for (int i = 1; i< HPL_MAX_PARAM; i++){
+//             (void) sscanf( line+total , "%s", matrices ); NSIZE[i]= atoi( matrices);
+//             total+=sizeof(NSIZE[i]);
+//       }
       
-/*
- * Matrix repition of size needed(>=0) (NREP)
- */
-      (void) fgets( line, HPL_LINE_MAX - 2, infp );
-      (void) sscanf( line, "%s", matrices ); NREP[0]= atoi( matrices);
-      int totality = sizeof(NREP[0])-2;
-      for (int i = 1; i< HPL_MAX_PARAM; i++){
-            (void) sscanf( line+totality, "%s", matrices ); NREP[i]= atoi(matrices);
-            totality +=sizeof(NREP[i]);
-      }
+// /*
+//  * Matrix repition of size needed(>=0) (NREP)
+//  */
+//       (void) fgets( line, HPL_LINE_MAX - 2, infp );
+//       (void) sscanf( line, "%s", matrices ); NREP[0]= atoi( matrices);
+//       int totality = sizeof(NREP[0])-2;
+//       for (int i = 1; i< HPL_MAX_PARAM; i++){
+//             (void) sscanf( line+totality, "%s", matrices ); NREP[i]= atoi(matrices);
+//             totality +=sizeof(NREP[i]);
+//       }
   
 /*
  * Close input file
@@ -1194,24 +1194,24 @@ label_error:
 /*ADDED TO INPUT*/
 
  /*
- * NSIZE (AUTHOR = OHAD KATZ)
- *    
- */   
-      printf("%d %d \n", *NSIZE, sizeof(NREP));
-      for(i =0; i< sizeof(NSIZE)-3; i++){
-            HPL_fprintf( TEST-> outfp,      "\nNSIZE Mat %d : %d matrices",
-                   i+1, NSIZE[i]);
-      }
+//  * NSIZE (AUTHOR = OHAD KATZ)
+//  *    
+//  */   
+//       printf("%d %d \n", *NSIZE, sizeof(NREP));
+//       for(i =0; i< sizeof(NSIZE)-3; i++){
+//             HPL_fprintf( TEST-> outfp,      "\nNSIZE Mat %d : %d matrices",
+//                    i+1, NSIZE[i]);
+//       }
     
-/*
- * NREP (AUTHOR = OHAD KATZ)
- */
+// /*
+//  * NREP (AUTHOR = OHAD KATZ)
+//  */
 
-      for(i =0; i< sizeof(NREP)-5; i++){
-            HPL_fprintf( TEST-> outfp,      "\nNREP for Mat %d : %d matrices",
-                   i+1, NREP[i]);
-      }
-      HPL_fprintf( TEST->outfp, "\n\n");
+//       for(i =0; i< sizeof(NREP)-5; i++){
+//             HPL_fprintf( TEST-> outfp,      "\nNREP for Mat %d : %d matrices",
+//                    i+1, NREP[i]);
+//       }
+       HPL_fprintf( TEST->outfp, "\n\n");
 
 /*
  * For testing only
