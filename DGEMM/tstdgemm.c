@@ -102,16 +102,15 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
    */
 
   int matrix = 0;
-  printf("%d\n%d\n", params->NSIZE[0],  params->nsizeval[0]);
+
   while (params->nsizeval[matrix]!= NULL){
-    int MatSize = params->NSIZE[i];
+    int MatSize = params->NSIZE[matrix];
+    if (MatSize <=0 || MatSize == NULL) break;
     for(i=0;i< MatSize ;i++){
       int repetitions= params->NREP[i];
       for (j = 0 ; j < repetitions; j++){
         n = params->NSIZE[i]; 
       
-
-        // n = (int)(sqrt(params->HPLMaxProcMem / sizeof(double) / 3 + 0.25 ) - 0.5);
         if (n < 0) n = -n; /* if 'n' has overflown an integer */
         l_n = n;
         lda = ldb = ldc = n;
