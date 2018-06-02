@@ -106,11 +106,11 @@ HPCC_InputFileInit(HPCC_Params *params) {
       ioErr = 1;
       goto ioEnd;
     }
-    
+    /*Now at line 32*/
     /* Get values of N for PTRANS */
     line++;
     fgets( buf, nbuf, f );
-    rv = sscanf( buf, "%d", &n );
+    rv = sscanf( buf, "%d", &n ); //Gets one value of N for PTRANS
   
     if (rv != 1 || n < 0) { /* parse error or negative value*/
       n = 0;
@@ -122,8 +122,8 @@ HPCC_InputFileInit(HPCC_Params *params) {
 
     line++;
     fgets( buf, nbuf, f );
-    ReadInts( buf, n, params->PTRANSnval );
-    
+    ReadInts( buf, n, params->PTRANSnval ); //READS INTEGERS PASSED INTO PTRANSVAL
+  
     /* find the largest matrix for HPL */
     maxHPLn = params->nval[iiamax( params->ns, params->nval, 1 )];
   
@@ -172,12 +172,13 @@ HPCC_InputFileInit(HPCC_Params *params) {
     line++;
     fgets( buf, nbuf, f );
     ReadInts( buf, n, params->NSIZE );
+    //MIGHT NEED TO ADD MORE HERE //
     
     /*Pull # of repetitions needed for DGEMM*/
     line++;
     fgets( buf, nbuf, f );
     ReadInts( buf, n, params->NREP );
-
+    //MIGHT NEED TO ADD MORE HERE //
     ioErr = 0;
     ioEnd:
     if (f) fclose( f );
