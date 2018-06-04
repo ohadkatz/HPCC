@@ -110,8 +110,8 @@ typedef struct {
   /* Ohad Katz */
   /*ADDED NSIZE , NREP*/
   int DGEMM_N;
-  int NSIZE[HPL_MAX_PARAM];
-  int NREP[HPL_MAX_PARAM];
+  int DGEMM_MatSize[HPL_MAX_PARAM];
+  int DGEMM_MatRep[HPL_MAX_PARAM];
 } HPCC_Params;
 /*
 This is what needs to be done to add a new benchmark:
