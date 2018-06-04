@@ -173,7 +173,7 @@ HPL_DEFS     = $(F2CDEFS) $(HPL_OPTS) $(HPL_INCLUDES)
 #
 CC           = mpicc
 CCNOOPT      = $(HPL_DEFS) 
-CCFLAGS      = $(HPL_DEFS) -O3
+CCFLAGS      = $(HPL_DEFS) -g -O3
 #
 LINKER       = mpicc
 LINKFLAGS    = 

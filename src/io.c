@@ -8,6 +8,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <time.h>
+#include <assert.h>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -171,14 +172,18 @@ HPCC_InputFileInit(HPCC_Params *params) {
     /*Pull matrix sizes needed for DGEMM*/
     line++;
     fgets( buf, nbuf, f );
-    ReadInts( buf, n, params->NSIZE );
+    params->DGEMM_N = ReadInts( buf, HPL_MAX_PARAM, params->NSIZE ) + 1;
+    
     //MIGHT NEED TO ADD MORE HERE //
     
     /*Pull # of repetitions needed for DGEMM*/
     line++;
     fgets( buf, nbuf, f );
-    ReadInts( buf, n, params->NREP );
+    n = ReadInts( buf, HPL_MAX_PARAM, params->NREP ) + 1;
+    assert(n == params->DGEMM_N);
+
     //MIGHT NEED TO ADD MORE HERE //
+    
     ioErr = 0;
     ioEnd:
     if (f) fclose( f );
@@ -339,7 +344,6 @@ HPCC_Init(HPCC_Params *params) {
   params->MPIRandomAccess_LCG_TimeBound =
   params->MPIRandomAccess_TimeBound = -1.0;
 
-  params->DGEMM_N =
   params->FFT_N =
   params->StreamVectorSize =
   params->MPIRandomAccess_LCG_Algorithm =
