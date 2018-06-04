@@ -47,7 +47,7 @@ HPCC_InitHPL(HPCC_Params *p) {
   HPL_pdinfo( &p->test, &p->ns, p->nval, &p->nbs, p->nbval, &p->porder, &p->npqs, p->pval,
               p->qval, &p->npfs, p->pfaval, &p->nbms, p->nbmval, &p->ndvs, p->ndvval, &p->nrfs,
               p->rfaval, &p->ntps, p->topval, &p->ndhs, p->ndhval, &p->fswap, &p->tswap,
-              &p->L1notran, &p->Unotran, &p->equil, &p->align, /*new*/&p->nsizeval,&p->nrepval );
+              &p->L1notran, &p->Unotran, &p->equil, &p->align );
 
   if (p->test.thrsh <= 0.0) p->Failure = 1;
 
@@ -759,7 +759,7 @@ HPCC_Defaults(HPL_T_test *TEST, int *NS, int *N,
               int *NRFS, HPL_T_FACT *RF,
               int *NTPS, HPL_T_TOP *TP,
               int *NDHS, int *DH,
-              HPL_T_SWAP *FSWAP, int *TSWAP, int *L1NOTRAN, int *UNOTRAN, int *EQUIL, int *ALIGN,int *NSIZE, int *NREP, MPI_Comm comm) {
+              HPL_T_SWAP *FSWAP, int *TSWAP, int *L1NOTRAN, int *UNOTRAN, int *EQUIL, int *ALIGN, MPI_Comm comm) {
   int nb = 80;
   double memFactor = 0.8;
 
