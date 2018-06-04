@@ -172,14 +172,14 @@ HPCC_InputFileInit(HPCC_Params *params) {
     /*Pull matrix sizes needed for DGEMM*/
     line++;
     fgets( buf, nbuf, f );
-    params->DGEMM_N = ReadInts( buf, HPL_MAX_PARAM, params->NSIZE ) + 1;
+    params->DGEMM_N = ReadInts( buf, HPL_MAX_PARAM, params->DGEMM_MatSize) + 1;
     
     //MIGHT NEED TO ADD MORE HERE //
     
     /*Pull # of repetitions needed for DGEMM*/
     line++;
     fgets( buf, nbuf, f );
-    n = ReadInts( buf, HPL_MAX_PARAM, params->NREP ) + 1;
+    n = ReadInts( buf, HPL_MAX_PARAM, params->DGEMM_MatRep) + 1;
     assert(n == params->DGEMM_N);
 
     //MIGHT NEED TO ADD MORE HERE //
