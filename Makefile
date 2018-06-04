@@ -1,6 +1,6 @@
 # -*- Makefile -*-
 
-arch = UNKNOWN
+arch = intel64_desktop_deb 
 include hpl/Make.$(arch)
 
 all:

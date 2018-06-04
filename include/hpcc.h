@@ -80,7 +80,7 @@ typedef struct {
     NaturallyOrderedRingBandwidth, RandomlyOrderedRingBandwidth,
     MinPingPongLatency, AvgPingPongLatency, MaxPingPongBandwidth, AvgPingPongBandwidth,
     NaturallyOrderedRingLatency;
-  int DGEMM_N;
+  
   int StreamThreads, StreamVectorSize;
   int FFT_N;
   int MPIFFT_Procs;
@@ -109,10 +109,9 @@ typedef struct {
 
   /* Ohad Katz */
   /*ADDED NSIZE , NREP*/
+  int DGEMM_N;
   int NSIZE[HPL_MAX_PARAM];
   int NREP[HPL_MAX_PARAM];
-  int Nsize;
-  int Nrep;
 } HPCC_Params;
 /*
 This is what needs to be done to add a new benchmark:

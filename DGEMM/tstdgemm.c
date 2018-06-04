@@ -58,7 +58,7 @@ dnrm_inf(int m, int n, double *a, int lda) {
 int
 HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufailure) {
   int i,j, n, lda, ldb, ldc, failure = 1;
-  double *a, *b, *c, *x, *y, *z, alpha, beta, sres, cnrm, xnrm;
+  double *a=NULL, *b=NULL, *c=NULL, *x=NULL, *y=NULL, *z=NULL, alpha, beta, sres, cnrm, xnrm;
   double Gflops = 0.0, dn, t0, t1;
   long l_n;
   FILE *outFile;
@@ -101,16 +101,17 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
    *   LAST ELEMENT OF ARRAY = arr[sizeof(arr)/sizeof(arr[0]) - 1];
    */
 
-  int matrix = 0;
+  fprintf( outFile, "Matrix size for DGEMM:");
+  for(int i_matrix = 0; i_matrix< params->DGEMM_N; i_matrix++){
+    int MatSize = params->NSIZE[i_matrix];
+    fprintf( outFile, " %d", MatSize);
+  }
+  fprintf( outFile, "\n");
 
-  while (params->NSIZE[matrix]!= NULL){
-    printf("%d", params->NSIZE[matrix]);
-    int MatSize = params->NSIZE[matrix];
-    if (MatSize <=0 || MatSize == NULL) break;
-    for(i=0; i< MatSize ; i++){
-      int repetitions= params->NREP[i];
+  for(int i_matrix = 0; i_matrix< params->DGEMM_N; i_matrix++){
+      int repetitions= params->NREP[i_matrix];
       for (j = 0 ; j < repetitions; j++){
-        n = params->NSIZE[i]; 
+        n = params->NSIZE[i_matrix]; 
       
         if (n < 0) n = -n; /* if 'n' has overflown an integer */
         l_n = n;
@@ -125,7 +126,7 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
         z = HPCC_XMALLOC( double, l_n );
 
         if (! a || ! b || ! c || ! x || ! y || ! z) {
-          goto comp_end;
+          break;
         }
 
         seed_a = (int)time( NULL );
@@ -173,31 +174,35 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
 
         sres = dnrm_inf( n, 1, y, n ) / cnrm / xnrm / n / HPL_dlamch( HPL_MACH_EPS );
       
-        
-      }
-    }
-    matrix++;
-  }
-  if (doIO) fprintf( outFile, "Scaled residual: %g\n", sres );
-
-  if (sres < params->test.thrsh)
-    failure = 0;   
-  comp_end:
-
         if (z) HPCC_free( z );
         if (y) HPCC_free( y );
         if (x) HPCC_free( x );
         if (c) HPCC_free( c );
         if (b) HPCC_free( b );
         if (a) HPCC_free( a );
+      }
+    }
+  
+  if (doIO) fprintf( outFile, "Scaled residual: %g\n", sres );
 
-        if (doIO) {
-          fflush( outFile );
-          fclose( outFile );
-        }
+  if (sres < params->test.thrsh)
+    failure = 0;   
 
-        if (UGflops) *UGflops = Gflops;
-        if (Un) *Un = n;
-        if (Ufailure) *Ufailure = failure;
+
+	if (z) HPCC_free( z );
+	if (y) HPCC_free( y );
+	if (x) HPCC_free( x );
+	if (c) HPCC_free( c );
+	if (b) HPCC_free( b );
+	if (a) HPCC_free( a );
+
+	if (doIO) {
+	  fflush( outFile );
+	  fclose( outFile );
+	}
+
+	if (UGflops) *UGflops = Gflops;
+	if (Un) *Un = n;
+	if (Ufailure) *Ufailure = failure;
   return 0;
 }
