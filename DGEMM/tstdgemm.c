@@ -103,10 +103,11 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
 
   int matrix = 0;
 
-  while (params->nsizeval[matrix]!= NULL){
+  while (params->NSIZE[matrix]!= NULL){
+    printf("%d", params->NSIZE[matrix]);
     int MatSize = params->NSIZE[matrix];
     if (MatSize <=0 || MatSize == NULL) break;
-    for(i=0;i< MatSize ;i++){
+    for(i=0; i< MatSize ; i++){
       int repetitions= params->NREP[i];
       for (j = 0 ; j < repetitions; j++){
         n = params->NSIZE[i]; 
@@ -171,13 +172,17 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
         HPL_dgemv( HplColumnMajor, HplNoTrans, n, n, beta, c, ldc, x, 1, 1.0, y, 1 );
 
         sres = dnrm_inf( n, 1, y, n ) / cnrm / xnrm / n / HPL_dlamch( HPL_MACH_EPS );
+      
+        
+      }
+    }
+    matrix++;
+  }
+  if (doIO) fprintf( outFile, "Scaled residual: %g\n", sres );
 
-        if (doIO) fprintf( outFile, "Scaled residual: %g\n", sres );
-
-        if (sres < params->test.thrsh)
-          failure = 0;
-
-        comp_end:
+  if (sres < params->test.thrsh)
+    failure = 0;   
+  comp_end:
 
         if (z) HPCC_free( z );
         if (y) HPCC_free( y );
@@ -194,11 +199,5 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
         if (UGflops) *UGflops = Gflops;
         if (Un) *Un = n;
         if (Ufailure) *Ufailure = failure;
-        
-        
-      }
-    }
-    matrix++;
-  }
   return 0;
 }

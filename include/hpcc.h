@@ -50,27 +50,23 @@ typedef struct {
                               qval  [HPL_MAX_PARAM],
                               nbmval[HPL_MAX_PARAM],
                               ndvval[HPL_MAX_PARAM],
-                              ndhval[HPL_MAX_PARAM],
-                              nsizeval[HPL_MAX_PARAM],
-                              nrepval[HPL_MAX_PARAM];
+                              ndhval[HPL_MAX_PARAM];
+        
    HPL_T_ORDER                porder;
    HPL_T_FACT                 pfaval[HPL_MAX_PARAM],
                               rfaval[HPL_MAX_PARAM];
    HPL_T_TOP                  topval[HPL_MAX_PARAM];
    HPL_T_FACT                 rpfa;
    HPL_T_SWAP                 fswap;
-   int ns, nbs, npqs, npfs, nbms, ndvs, nrfs, ntps, ndhs, tswap, L1notran, Unotran, equil, align,nsize,nrep;
+   int ns, nbs, npqs, npfs, nbms, ndvs, nrfs, ntps, ndhs, tswap, L1notran, Unotran, equil, align;
 
   /* HPCC section */
   char inFname[256 + 1], outFname[256 + 1];
   int PTRANSns, PTRANSnval[2 * HPL_MAX_PARAM];
   int PTRANSnbs, PTRANSnbval[2 * HPL_MAX_PARAM];
   int PTRANSnpqs, PTRANSpval[2 * HPL_MAX_PARAM], PTRANSqval[2 * HPL_MAX_PARAM];
-  /*ADDED NSIZE , NREP*/
-  int NSIZE[HPL_MAX_PARAM];
-  int NREP[HPL_MAX_PARAM];
-  int Nsize;
-  int Nrep;
+  
+  
   double MPIRandomAccess_LCG_GUPs, MPIRandomAccess_GUPs, Star_LCG_GUPs, Single_LCG_GUPs, StarGUPs, SingleGUPs,
     MPIRandomAccess_ErrorsFraction, MPIRandomAccess_time, MPIRandomAccess_CheckTime,
     MPIRandomAccess_TimeBound,
@@ -110,6 +106,13 @@ typedef struct {
   int FFTEnblk, FFTEnp, FFTEl2size;
   s64Int RandomAccess_LCG_N, RandomAccess_N, MPIRandomAccess_LCG_ExeUpdates, MPIRandomAccess_ExeUpdates,
     MPIRandomAccess_LCG_N, MPIRandomAccess_N, MPIRandomAccess_LCG_Errors, MPIRandomAccess_Errors, MPIFFT_N;
+
+  /* Ohad Katz */
+  /*ADDED NSIZE , NREP*/
+  int NSIZE[HPL_MAX_PARAM];
+  int NREP[HPL_MAX_PARAM];
+  int Nsize;
+  int Nrep;
 } HPCC_Params;
 /*
 This is what needs to be done to add a new benchmark:
@@ -142,7 +145,7 @@ HPCC_Defaults(HPL_T_test *TEST, int *NS, int *N,
               int *NRFS, HPL_T_FACT *RF,
               int *NTPS, HPL_T_TOP *TP,
               int *NDHS, int *DH,
-              HPL_T_SWAP *FSWAP, int *TSWAP, int *L1NOTRAN, int *UNOTRAN, int *EQUIL, int *ALIGN,int *NSIZE, int *NREP, MPI_Comm comm);
+              HPL_T_SWAP *FSWAP, int *TSWAP, int *L1NOTRAN, int *UNOTRAN, int *EQUIL, int *ALIGN,  MPI_Comm comm);
 
 extern int HPL_main(int ARGC, char **ARGV, HPL_RuntimeData *rdata, int *failure);
 extern float HPL_slamch (const HPL_T_MACH);

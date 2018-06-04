@@ -60,7 +60,7 @@ HPCC_Defaults(HPL_T_test *TEST, int *NS, int *N,
               int *NRFS, HPL_T_FACT *RF,
               int *NTPS, HPL_T_TOP *TP,
               int *NDHS, int *DH,
-              HPL_T_SWAP *FSWAP, int *TSWAP, int *L1NOTRAN, int *UNOTRAN, int *EQUIL, int *ALIGN,int *NSIZE, int *NREP ,MPI_Comm comm);
+              HPL_T_SWAP *FSWAP, int *TSWAP, int *L1NOTRAN, int *UNOTRAN, int *EQUIL, int *ALIGN, MPI_Comm comm);
 
 #ifdef HPL_STDC_HEADERS
 void HPL_pdinfo
@@ -91,13 +91,11 @@ void HPL_pdinfo
    int *                            L1NOTRAN,
    int *                            UNOTRAN,
    int *                            EQUIL,
-   int *                            ALIGN,
-   int *                            NSIZE,
-   int *                            NREP
+   int *                            ALIGN
 )
 #else
 void HPL_pdinfo
-( TEST, NS, N, NBS, NB, PMAPPIN, NPQS, P, Q, NPFS, PF, NBMS, NBM, NDVS, NDV, NRFS, RF, NTPS, TP, NDHS, DH, FSWAP, TSWAP, L1NOTRAN, UNOTRAN, EQUIL, ALIGN, NSIZE, NREP )
+( TEST, NS, N, NBS, NB, PMAPPIN, NPQS, P, Q, NPFS, PF, NBMS, NBM, NDVS, NDV, NRFS, RF, NTPS, TP, NDHS, DH, FSWAP, TSWAP, L1NOTRAN, UNOTRAN, EQUIL, ALIGN )
    HPL_T_test *                     TEST;
    int *                            NS;
    int *                            N;
@@ -125,15 +123,10 @@ void HPL_pdinfo
    int *                            UNOTRAN;
    int *                            EQUIL;
    int *                            ALIGN;
-   /*AUTHOR= OHAD KATZ
-   * Added NSIZE and NREP!
-   */
-   int *                            NSIZE;
-   int *                            NREP;
 #endif
 {
-
 /* 
+ * Purpose
  * =======
  *
  * HPL_pdinfo reads  the  startup  information for the various tests and
@@ -283,22 +276,13 @@ void HPL_pdinfo
  *         allocated buffers in double precision words. ALIGN is greater
  *         than zero.
  *
- * ADDED BY OHAD KATZ
- * 
- * NSIZE   (global output)               int []
- *         On Exit, NSIZE specifies the specific size of each matrix
- *         that is taken as in input in DGEMM
- *        
- * NREP    (global output)               int []
- *         On exit, NREP  specifies the amount of repitions DGEMM is 
- *         required to take in order to output the correct GFLOPS.
  * ---------------------------------------------------------------------
- * 
- * .. Local Variables .*/
+ */ 
+/*
+ * .. Local Variables ..
+ */
    char                       file[HPL_LINE_MAX], line[HPL_LINE_MAX],
-                              auth[HPL_LINE_MAX], num [HPL_LINE_MAX],
-                              /*OHAD KATZ, Added new matrices for size and repetitions*/
-                              matrices[HPL_LINE_MAX], repetitions[HPL_LINE_MAX];
+                              auth[HPL_LINE_MAX], num [HPL_LINE_MAX];
    FILE                       * infp;
    int                        * iwork;
    char                       * lineptr;
@@ -640,13 +624,6 @@ void HPL_pdinfo
       (void) fgets( line, HPL_LINE_MAX - 2, infp );
       (void) sscanf( line, "%s", num ); *ALIGN = atoi( num );
       if( *ALIGN <= 0 ) *ALIGN = 4;
-
-/* AUTHOR= OHAD KATZ
- *
- * Matrix input of specific sizes needed(>=0) (NSIZE)
- */
-
-  
 /*
  * Close input file
  */
@@ -688,8 +665,6 @@ label_error:
                     UNOTRAN,
                     EQUIL,
                     ALIGN,
-                    NSIZE,
-                    NREP,
                     MPI_COMM_WORLD );
    }
 /*
@@ -713,10 +688,6 @@ label_error:
       iwork[ 6] = *NDVS;    iwork[ 7] = *NRFS;     iwork[ 8] = *NTPS;
       iwork[ 9] = *NDHS;    iwork[10] = *TSWAP;    iwork[11] = *L1NOTRAN;
       iwork[12] = *UNOTRAN; iwork[13] = *EQUIL;    iwork[14] = *ALIGN;
-      /*ADDED BROADCAST ARRAY
-      *AUTHOR= OHAD KATZ
-      */
-      iwork[15]=*NSIZE;     iwork[16] = *NREP;
    }
    (void) HPL_broadcast( (void *)iwork, 15, HPL_INT, 0, MPI_COMM_WORLD );
    if( rank != 0 )
@@ -727,8 +698,6 @@ label_error:
       *NDVS     = iwork[ 6]; *NRFS  = iwork[ 7]; *NTPS     = iwork[ 8];
       *NDHS     = iwork[ 9]; *TSWAP = iwork[10]; *L1NOTRAN = iwork[11];
       *UNOTRAN  = iwork[12]; *EQUIL = iwork[13]; *ALIGN    = iwork[14];
-
-      *NSIZE = iwork[15];     *NREP = iwork[16];
    }
    if( iwork ) free( iwork );
 /*
@@ -1168,8 +1137,8 @@ label_error:
  */
       HPL_fprintf( TEST->outfp,       "\nALIGN  : %d double precision words",
                    *ALIGN );
-       HPL_fprintf( TEST->outfp, "\n\n");
 
+      HPL_fprintf( TEST->outfp, "\n\n" );
 /*
  * For testing only
  */
