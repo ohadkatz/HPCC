@@ -6,21 +6,27 @@
 #include <sys/time.h>
 /* Generates random matrix with entries between 0.0 and 1.0 */
 
-double Max(double arg[], size){
-  int max= arg[0], i;
+
+double Max(double arr[], int size){
+  double max= arr[0];
+  int i;
   for(i=0; i<size;i++){
-    if (arr[i]>max){
+    if (arr[i]>max ){
       max= arr[i];
     }
   }
   return max;
 }
 
-double Min(double arg[], size){
-int min= arg[0], i;
+double Min(double arr[], int size){
+double min= arr[0];
+int i;
   for(i=0; i<size;i++){
-    if (arr[i]<max){
+    if (arr[i]<min && arr[i]>0){
       min= arr[i];
+    }
+    if (arr[i]<=0){
+      continue;
     }
   }
   return min;
@@ -71,7 +77,7 @@ dnrm_inf(int m, int n, double *a, int lda) {
   return mx;
 }
 double
-HPCC_DGEMM_Calculation(int n, int doIO, double *UGflops, int *Un, int *Ufailure, double *GFLOPS, int iteration, double ScaledRes){
+HPCC_DGEMM_Calculation(int n, int doIO, double *UGflops, int *Un, int *Ufailure, double *GFLOPS, int iteration){
   int i,j,lda, ldb, ldc, failure = 1;
   double *a=NULL, *b=NULL, *c=NULL, *x=NULL, *y=NULL, *z=NULL, alpha, beta, sres, cnrm, xnrm;
   double Gflops = 0.0, dn, t0, t1;
@@ -108,12 +114,12 @@ HPCC_DGEMM_Calculation(int n, int doIO, double *UGflops, int *Un, int *Ufailure,
   t0 = MPI_Wtime();
   HPL_dgemm( HplColumnMajor, HplNoTrans, HplNoTrans, n, n, n, alpha, a, n, b, n, beta, c, n );
   t1 = MPI_Wtime();
-  printf("n = %d\nt1 =%d\nt0= %d\n",n , t1,t0);
+  //printf("n = %d\nt1 =%f\nt0= %f\n",n , t1,t0);
   t1 -= t0;
   dn = (double)n;
   if (t1 != 0.0 && t1 != -0.0){
     Gflops = 2.0e-9 * dn * dn * dn / t1;
-    printf("GFLOPS: %f", Gflops);
+    //printf("GFLOPS: %f", Gflops);
     GFLOPS[iteration]= Gflops;
   }
   else
@@ -154,8 +160,10 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
   long l_n;
   FILE *outFile;
   int seed_a, seed_b, seed_c, seed_x;
-  double GflopArray[params->DGEMM_N]; 
-  double avg = 0;
+  clock_t start;
+  double timer[params->DGEMM_N];
+  double maximums[params->DGEMM_N], minimums[params->DGEMM_N], avg[params->DGEMM_N], sresArr[params->DGEMM_N];
+  struct timeval start_time, final_time;
   if (doIO) {
     outFile = fopen( params->outFname, "a" );
     if (! outFile) {
@@ -184,36 +192,54 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
   * [    1024     |     100      | 2 min 10 sec|     49.13    |    57.93     |    21.34      |  .14  ]
   * [------------------------------------------------------------------------------------------------]
   */
+  
   for(int i_matrix = 0; i_matrix< params->DGEMM_N; i_matrix++){
       int repetitions= params->DGEMM_MatRep[i_matrix];
-      struct timeval start_time, final_time;
       
+      double GflopArray[repetitions];
+      avg[i_matrix] = 0; 
       gettimeofday(&start_time, NULL);
+      start= clock();
       for (j = 0 ; j < repetitions; j++){
-        
         n = params->DGEMM_MatSize[i_matrix]; 
-        sres = HPCC_DGEMM_Calculation(n, doIO, UGflops, Un, Ufailure, GflopArray, i_matrix );
-       
+        sres = HPCC_DGEMM_Calculation(n, doIO, UGflops, Un, Ufailure, GflopArray, repetitions);
+        
+        avg[i_matrix] += GflopArray[j];
+      
         // if (! a || ! b || ! c || ! x || ! y || ! z) {
         //   break;
         // }
-      
       }
+      sresArr[i_matrix]= sres;
+      avg[i_matrix] = avg[i_matrix]/repetitions;
       gettimeofday(&final_time, NULL);
+      start=clock()-start;
       
-      fprintf(outFile, "Time for array of size %d : %ld \n",  params->DGEMM_MatSize[i_matrix], ((final_time.tv_sec * 1000000 + final_time.tv_usec) - (start_time.tv_sec * 1000000 + start_time.tv_usec)));
-      fprintf(outFile, "\n# Repetitions: %d \n", params->DGEMM_MatRep[i_matrix]);
-      fprintf(outFile, "\nGFLOPS/S: %f \n", GflopArray[i_matrix]);
-      fprintf(outFile, "\nMaximum GFLOP: %f \n" Max(GflopArray, params->DGEMM_N));
-      fprintf(outFile, "\nMaximum GFLOP: %f \n" Min(GflopArray, params->DGEMM_N));
-      fprintf(outFile, "------------------------------------------\n" );
+      timer[i_matrix] = ((double) start)/CLOCKS_PER_SEC;
+      fprintf(outFile, "Scaled Residual: %g\n" , sres);
+      fprintf(outFile, "\nTime for array of size %d : %f\n",  params->DGEMM_MatSize[i_matrix], timer[i_matrix]);
+      fprintf(outFile, "\n# Repetitions: %d\n", params->DGEMM_MatRep[i_matrix]);
+      
+      maximums[i_matrix]=Max(GflopArray, repetitions);
+      minimums[i_matrix]=Min(GflopArray, repetitions);
+
+      fprintf(outFile, "\nMaximum GFLOP: %f\n", Max(GflopArray, repetitions));
+      fprintf(outFile, "\nMinimum GFLOP: %f\n", Min(GflopArray, repetitions));
+      fprintf(outFile, "\nAvg GFLOP: %f \n", avg[i_matrix]);
+      
+      fprintf(outFile, "---------------------------------------------------------\n");
+      
+      
     }
-  
-  for(int i=0; i < params->DGEMM_N;i++){
-    avg+=GflopArray[i];
+  fprintf(outFile, "|---------------------------------------------------------------------------------------------------------------------------------------------------------------|\n" );
+  fprintf(outFile,"|%-20s | %-20s | %-20s | %-20s | %-20s | %-20s | %-20s |\n", "SIZE OF MATRIX", "REPETITIONS", "TOTAL TIME (sec)", "AVG GFLOP", "MAX GFLOP", "MIN GFLOP", "SCALED RESIDUAL");
+  fprintf(outFile, "|---------------------------------------------------------------------------------------------------------------------------------------------------------------|\n" );
+  for(i = 0 ; i< params->DGEMM_N; i++){
+    fprintf(outFile,"|%-20d | %-20d | %-20f | %-20f | %-20f | %-20f | %-20f |\n", params->DGEMM_MatSize[i], params->DGEMM_MatRep[i], timer[i], avg[i], maximums[i], minimums[i], sresArr[i]);
+    fprintf(outFile, "|---------------------------------------------------------------------------------------------------------------------------------------------------------------|\n" );
   }
-  avg= avg/params->DGEMM_N;
-  fprintf(outFile, "Avg GFLOP/S: %f\n \n", avg);
+  
+
   if (doIO) fprintf( outFile, "Scaled residual: %g\n", sres );
 
   if (sres < params->test.thrsh)
