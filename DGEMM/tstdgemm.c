@@ -4,6 +4,7 @@
 
 #include <hpcc.h>
 #include <sys/time.h>
+#include <limits.h>
 /* Generates random matrix with entries between 0.0 and 1.0 */
 
 
@@ -77,7 +78,7 @@ dnrm_inf(int m, int n, double *a, int lda) {
   return mx;
 }
 double
-HPCC_DGEMM_Calculation(int n, int doIO, double *UGflops, int *Un, int *Ufailure, double *GFLOPS, int iteration){
+HPCC_DGEMM_Calculation(int n, int doIO, double *UGflops, int *Un, int *Ufailure, double *GFLOPVAL){
   int i,j,lda, ldb, ldc, failure = 1;
   double *a=NULL, *b=NULL, *c=NULL, *x=NULL, *y=NULL, *z=NULL, alpha, beta, sres, cnrm, xnrm;
   double Gflops = 0.0, dn, t0, t1;
@@ -119,7 +120,7 @@ HPCC_DGEMM_Calculation(int n, int doIO, double *UGflops, int *Un, int *Ufailure,
   dn = (double)n;
   if (t1 != 0.0 && t1 != -0.0){
     Gflops = 2.0e-9 * dn * dn * dn / t1;
-    GFLOPS[iteration]= Gflops;
+    *GFLOPVAL = Gflops;
   }
   else
     Gflops = 0.0;
@@ -155,13 +156,14 @@ HPCC_DGEMM_Calculation(int n, int doIO, double *UGflops, int *Un, int *Ufailure,
 int
 HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufailure) {
   int i,j, n, lda, ldb, ldc, failure = 1;
-  double *a=NULL, *b=NULL, *c=NULL, *x=NULL, *y=NULL,  *z=NULL, alpha, beta, sres, cnrm, xnrm;
-  double Gflops = 0.0, dn, start,end;
+  double *a=NULL, *b=NULL, *c=NULL, *x=NULL, *y=NULL,  *z=NULL, alpha, beta, sres, cnrm, xnrm,max,min;
+  double Gflop = 0.0, dn, start,end;
   long l_n;
   FILE *outFile;
   int seed_a, seed_b, seed_c, seed_x;
   double timer[params->DGEMM_N];
   double maximums[params->DGEMM_N], minimums[params->DGEMM_N], avg[params->DGEMM_N], sresArr[params->DGEMM_N],stddev[params->DGEMM_N], sum[params->DGEMM_N];
+  double avgSquare,sumSquare;
   if (doIO) {
     outFile = fopen( params->outFname, "a" );
     if (! outFile) {
@@ -183,7 +185,7 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
   * 
   *  Sample Output:
   * [------------------------------------------------------------------------------------------------]
-  * [ Matrix Size |  Repetitions | Total Time  |  Avg GFLOPS  |  Max GFLOP   |   Min GFLOP   |  srec ]
+  * [ Matrix Size |  Repetitions | Total Time  |  Avg GFLOPS  |  Min GFLOP   |   Max GFLOP   |  srec ]
   * [    128      |     1000     |   30 sec    |     47.123   |    57.391    |    14.532     |  .03  ] 
   * [    256      |     500      |   40 sec    |     50.432   |    61.123    |    16.431     |  .021 ]
   * [    512      |     250      | 1 min 30 sec|     48.123   |    53.912    |    23.13      |  .23  ]
@@ -193,50 +195,56 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
   
   for(int i_matrix = 0; i_matrix< params->DGEMM_N; i_matrix++){
       int repetitions= params->DGEMM_MatRep[i_matrix];
-      
-      double GflopArray[repetitions];
+      double Gflop;
       avg[i_matrix] = 0; 
       sum[i_matrix] = 0;
+      max = 0;
+      min = INT_MAX;
       start = MPI_Wtime();
       for (int repnum = 0 ; repnum < repetitions; repnum++){
         n = params->DGEMM_MatSize[i_matrix]; 
-        sres = HPCC_DGEMM_Calculation(n, doIO, UGflops, Un, Ufailure, GflopArray, repnum);
-
-        sum[i_matrix] += GflopArray[repnum];
-             
+        sres = HPCC_DGEMM_Calculation(n, doIO, UGflops, Un, Ufailure, &Gflop);
+        
+        if (Gflop>max) max=Gflop;
+        if (Gflop<min) min=Gflop;
+        
+        sum[i_matrix] += Gflop;
+        stddev[i_matrix] += Gflop*Gflop;
+        
         // if (! a || ! b || ! c || ! x || ! y || ! z) {
         //   break;
         // }
       }
+      
       sresArr[i_matrix]= sres;
+      
       avg[i_matrix] = sum[i_matrix]/repetitions;
-      for(i=0; i < repetitions; i++){
-        stddev[i_matrix] += ((GflopArray[i]-avg[i_matrix])*(GflopArray[i]-avg[i_matrix]));
-      }
-      stddev[i_matrix]= sqrt(stddev[i_matrix]/repetitions);
-
+      avgSquare= avg[i_matrix]*avg[i_matrix];
+      stddev[i_matrix]= sqrt((stddev[i_matrix]/repetitions)-avgSquare);
+      
       end = MPI_Wtime();
       start = end-start;
       
       timer[i_matrix] = start;
       fprintf(outFile, "Scaled Residual: %g\n" , sres);
-      fprintf(outFile, "\nTime for array of size %d : %f\n",  params->DGEMM_MatSize[i_matrix], timer[i_matrix]);
+      fprintf(outFile, "\nTime for array of size %d : %f seconds\n",  params->DGEMM_MatSize[i_matrix], timer[i_matrix]);
       fprintf(outFile, "\n# Repetitions: %d\n", params->DGEMM_MatRep[i_matrix]);
       
-      maximums[i_matrix]=Max(GflopArray, repetitions);
-      minimums[i_matrix]=Min(GflopArray, repetitions);
+      maximums[i_matrix]=max;
+      minimums[i_matrix]=min;
 
-      fprintf(outFile, "\nMaximum GFLOP: %f\n", Max(GflopArray, repetitions));
-      fprintf(outFile, "\nMinimum GFLOP: %f\n", Min(GflopArray, repetitions));
-      fprintf(outFile, "\nAvg GFLOP: %f \n", avg[i_matrix]);
+      fprintf(outFile, "\nMaximum GFLOP/S: %f\n", max);
+      fprintf(outFile, "\nMinimum GFLOP/S: %f\n", min);
+      fprintf(outFile, "\nAvg GFLOP/S: %f \n", avg[i_matrix]);
       
       fprintf(outFile, "---------------------------------------------------------\n");
     }
-  fprintf(outFile, "|------------------------------------------------------------------------------------|\n" );
-  fprintf(outFile,"| %-10s %-10s %-10s %-10s %-10s %-10s %-10s %-10s\n", "Mat.Size", "Repeat", "Tot.Time", "Average", "Std.Dev",  "Min","Max", "S.Res |");
-  fprintf(outFile, "|------------------------------------------------------------------------------------|\n" );
+  
+  fprintf(outFile, "|---------------------------------------------------------------------------------------|\n" );
+  fprintf(outFile,"| %-10s %-10s %-10s %-10s %-10s %-10s %-10s %-10s\n", "Mat.Size", "Repeat", "Tot.Time", "Average", "Std.Dev",  "Min GFLOP","Max GFLOP", "Scal.Res |");
+  fprintf(outFile, "|---------------------------------------------------------------------------------------|\n" );
   for(i = 0 ; i< params->DGEMM_N; i++){
-    fprintf(outFile,"%10d %10d %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f\n", params->DGEMM_MatSize[i], params->DGEMM_MatRep[i], timer[i], avg[i],stddev[i], minimums[i],maximums[i], sresArr[i]);
+    fprintf(outFile,"%10d %10d %10.2f %10.2f %10.2f %10.2f %10.2f %10.2E\n", params->DGEMM_MatSize[i], params->DGEMM_MatRep[i], timer[i], avg[i],stddev[i], minimums[i],maximums[i], sresArr[i]);
   }
   
 
@@ -258,7 +266,7 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
 	  fclose( outFile );
 	}
 
-	if (UGflops) *UGflops = Gflops;
+	if (UGflops) *UGflops = Gflop;
 	if (Un) *Un = n;
 	if (Ufailure) *Ufailure = failure;
   return 0;
