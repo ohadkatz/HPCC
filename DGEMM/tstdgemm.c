@@ -162,7 +162,10 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
   double timer[params->DGEMM_N];
   double maximums[params->DGEMM_N], minimums[params->DGEMM_N], avg[params->DGEMM_N], sresArr[params->DGEMM_N],stddev[params->DGEMM_N], sum[params->DGEMM_N];
   double avgSquare,sumSquare;
+  FILE *Rfile= fopen("/home/ohadkatz/HPCC/Rinput.txt", "w");
+  fprintf(Rfile,"N,RunID,GFLOPS\n");
   if (doIO) {
+    
     outFile = fopen( params->outFname, "a" );
     if (! outFile) {
       outFile = stderr;
@@ -200,12 +203,13 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
       max = 0;
       min = INT_MAX;
       start = MPI_Wtime();
+
       for (int repnum = 0 ; repnum < repetitions; repnum++){\
         /*Set n to fixed size array in Input File*/
         n = params->DGEMM_MatSize[i_matrix]; 
         sres = HPCC_DGEMM_Calculation(n, doIO, UGflops, Un, Ufailure, &Gflop);
         
-        
+        fprintf(Rfile,"%d,%d,%f\n",params->DGEMM_MatSize[i_matrix],repnum+1,Gflop);
         if (Gflop>max) max=Gflop;
         if (Gflop<min) min=Gflop;
         
@@ -270,6 +274,8 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
 	if (doIO) {
 	  fflush( outFile );
 	  fclose( outFile );
+    fflush( Rfile );
+    fclose( Rfile );
 	}
 
 	if (UGflops) *UGflops = Gflop;
