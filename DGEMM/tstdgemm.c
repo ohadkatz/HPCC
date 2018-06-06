@@ -155,12 +155,10 @@ HPCC_DGEMM_Calculation(int n, int doIO, double *UGflops, int *Un, int *Ufailure,
 
 int
 HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufailure) {
-  int i,j, n, lda, ldb, ldc, failure = 1;
-  double *a=NULL, *b=NULL, *c=NULL, *x=NULL, *y=NULL,  *z=NULL, alpha, beta, sres, cnrm, xnrm,max,min;
-  double Gflop = 0.0, dn, start,end;
-  long l_n;
+  int i,j, n, failure = 1;
+  double sres, cnrm, xnrm,max,min;
+  double Gflop = 0.0,start,end;
   FILE *outFile;
-  int seed_a, seed_b, seed_c, seed_x;
   double timer[params->DGEMM_N];
   double maximums[params->DGEMM_N], minimums[params->DGEMM_N], avg[params->DGEMM_N], sresArr[params->DGEMM_N],stddev[params->DGEMM_N], sum[params->DGEMM_N];
   double avgSquare,sumSquare;
@@ -192,7 +190,8 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
   * [    1024     |     100      | 2 min 10 sec|     49.13    |    57.93     |    21.34      |  .14  ]
   * [------------------------------------------------------------------------------------------------]
   */
-  
+
+  /*Iterate through each Matrix Size and repeat operations on it*/
   for(int i_matrix = 0; i_matrix< params->DGEMM_N; i_matrix++){
       int repetitions= params->DGEMM_MatRep[i_matrix];
       double Gflop;
@@ -201,13 +200,16 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
       max = 0;
       min = INT_MAX;
       start = MPI_Wtime();
-      for (int repnum = 0 ; repnum < repetitions; repnum++){
+      for (int repnum = 0 ; repnum < repetitions; repnum++){\
+        /*Set n to fixed size array in Input File*/
         n = params->DGEMM_MatSize[i_matrix]; 
         sres = HPCC_DGEMM_Calculation(n, doIO, UGflops, Un, Ufailure, &Gflop);
+        
         
         if (Gflop>max) max=Gflop;
         if (Gflop<min) min=Gflop;
         
+        /*Sum up both Gflops and Gflop^2(For std.Deviation)*/
         sum[i_matrix] += Gflop;
         stddev[i_matrix] += Gflop*Gflop;
         
@@ -217,7 +219,11 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
       }
       
       sresArr[i_matrix]= sres;
-      
+      /*
+      * Average = sum/N
+      * Standard Deviation= Mean(Gflops^2)-Mean(Gflops)^2
+      */
+      /*Calculations for each fixed size matrix*/
       avg[i_matrix] = sum[i_matrix]/repetitions;
       avgSquare= avg[i_matrix]*avg[i_matrix];
       stddev[i_matrix]= sqrt((stddev[i_matrix]/repetitions)-avgSquare);
@@ -239,27 +245,27 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
       
       fprintf(outFile, "---------------------------------------------------------\n");
     }
-  
-  fprintf(outFile, "|---------------------------------------------------------------------------------------|\n" );
-  fprintf(outFile,"| %-10s %-10s %-10s %-10s %-10s %-10s %-10s %-10s\n", "Mat.Size", "Repeat", "Tot.Time", "Average", "Std.Dev",  "Min GFLOP","Max GFLOP", "Scal.Res |");
-  fprintf(outFile, "|---------------------------------------------------------------------------------------|\n" );
+  /*OUTPUT TABLE*/
+  fprintf(outFile, "|----------------------------------------------------------------------------------------|\n" );
+  fprintf(outFile,"|%-10s %-10s %-10s  %-10s  %-10s%-10s %-10s %-10s\n", "Mat.Size", "Repeat Amt.", "Tot.Time(s)", "Avg GFLOP", "Std.Dev",  "Min GFLOP","Max GFLOP", "Scal.Res|");
+  fprintf(outFile, "|----------------------------------------------------------------------------------------|\n" );
   for(i = 0 ; i< params->DGEMM_N; i++){
-    fprintf(outFile,"%10d %10d %10.2f %10.2f %10.2f %10.2f %10.2f %10.2E\n", params->DGEMM_MatSize[i], params->DGEMM_MatRep[i], timer[i], avg[i],stddev[i], minimums[i],maximums[i], sresArr[i]);
+    fprintf(outFile,"%10d %10d  %10.2f %10.2f %10.2f %10.2f %10.2f  %10.2E\n", params->DGEMM_MatSize[i], params->DGEMM_MatRep[i], timer[i], avg[i],stddev[i], minimums[i],maximums[i], sresArr[i]);
   }
   
 
-  if (doIO) fprintf( outFile, "Scaled residual: %g\n", sres );
+  if (doIO) fprintf( outFile, "\nScaled residual: %g\n", sres );
 
   if (sres < params->test.thrsh)
     failure = 0;   
 
 
-	if (z) HPCC_free( z );
-	if (y) HPCC_free( y );
-	if (x) HPCC_free( x );
-	if (c) HPCC_free( c );
-	if (b) HPCC_free( b );
-	if (a) HPCC_free( a );
+	// if (z) HPCC_free( z );
+	// if (y) HPCC_free( y );
+	// if (x) HPCC_free( x );
+	// if (c) HPCC_free( c );
+	// if (b) HPCC_free( b );
+	// if (a) HPCC_free( a );
 
 	if (doIO) {
 	  fflush( outFile );
