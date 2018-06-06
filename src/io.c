@@ -17,6 +17,7 @@
 static double HPCC_MemProc = -1.0, HPCC_MemVal = -1.0;
 static int HPCC_MemSpec = -1;
 
+/*Read Ints counts # of input values*/
 static int
 ReadInts(char *buf, int n, int *val) {
   int i, j;
@@ -174,15 +175,14 @@ HPCC_InputFileInit(HPCC_Params *params) {
     fgets( buf, nbuf, f );
     params->DGEMM_N = ReadInts( buf, HPL_MAX_PARAM, params->DGEMM_MatSize) + 1;
     
-    //MIGHT NEED TO ADD MORE HERE //
+    
     
     /*Pull # of repetitions needed for DGEMM*/
     line++;
     fgets( buf, nbuf, f );
     n = ReadInts( buf, HPL_MAX_PARAM, params->DGEMM_MatRep) + 1;
+    /*Want to make sure that each matrix has a repetition value*/
     assert(n == params->DGEMM_N);
-
-    //MIGHT NEED TO ADD MORE HERE //
     
     ioErr = 0;
     ioEnd:
@@ -557,10 +557,10 @@ HPCC_Finalize(HPCC_Params *params) {
     }
   }
 #else
-  fprintf( outputFile, "M_OPENMP=%ld\n", -1L );
-  fprintf( outputFile, "omp_get_num_threads=%d\n", 0 );
-  fprintf( outputFile, "omp_get_max_threads=%d\n", 0 );
-  fprintf( outputFile, "omp_get_num_procs=%d\n",   0 );
+  // fprintf( outputFile, "M_OPENMP=%ld\n", -1L );
+  // fprintf( outputFile, "omp_get_num_threads=%d\n", 0 );
+  // fprintf( outputFile, "omp_get_max_threads=%d\n", 0 );
+  // fprintf( outputFile, "omp_get_num_procs=%d\n",   0 );
 #endif
 
   fprintf( outputFile, "MemProc=%g\n", HPCC_MemProc );
