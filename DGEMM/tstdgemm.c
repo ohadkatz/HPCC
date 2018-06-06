@@ -162,7 +162,7 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
   double timer[params->DGEMM_N];
   double maximums[params->DGEMM_N], minimums[params->DGEMM_N], avg[params->DGEMM_N], sresArr[params->DGEMM_N],stddev[params->DGEMM_N], sum[params->DGEMM_N];
   double avgSquare,sumSquare;
-  FILE *Rfile= fopen("/home/ohadkatz/HPCC/Rinput.txt", "w");
+  FILE *Rfile= fopen("/home/ohadkatz/HPCC/RFiles/Rinput.txt", "w");
   fprintf(Rfile,"N,RunID,GFLOPS\n");
   if (doIO) {
     
