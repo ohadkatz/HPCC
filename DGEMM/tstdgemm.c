@@ -253,7 +253,7 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
   fprintf(outFile, "|----------------------------------------------------------------------------------------|\n" );
   fprintf(outFile,"|%-10s %-10s %-10s  %-10s  %-10s%-10s %-10s %-10s\n", "Mat.Size", "Repeat Amt.", "Tot.Time(s)", "Avg GFLOP", "Std.Dev",  "Min GFLOP","Max GFLOP", "Scal.Res|");
   fprintf(outFile, "|----------------------------------------------------------------------------------------|\n" );
-  for(i = 0 ; i< params->DGEMM_N; i++){
+  for(i = 1 ; i< params->DGEMM_N; i++){
     fprintf(outFile,"%10d %10d  %10.2f %10.2f %10.2f %10.2f %10.2f  %10.2E\n", params->DGEMM_MatSize[i], params->DGEMM_MatRep[i], timer[i], avg[i],stddev[i], minimums[i],maximums[i], sresArr[i]);
   }
   
