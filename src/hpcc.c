@@ -189,7 +189,7 @@ main(int argc, char *argv[]) {
   fprintf( outputFile,"Current time (%ld) is %s\n",(long)currentTime,ctime(&currentTime));
   fprintf( outputFile, "End of SingleDGEMM section.\n" );
   END_IO( myRank, outputFile );
-
+  
   /* -------------------------------------------------- */
   /*                    StarSTREAM                      */
   /* -------------------------------------------------- */
