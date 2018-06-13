@@ -167,6 +167,7 @@ extern int HPCC_MPIFFT(HPCC_Params *params);
 
 extern int HPCC_TestFFT(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufailure);
 extern int HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufailure);
+
 extern int MaxMem(int nprocs, int imrow, int imcol, int nmat, int *mval, int *nval, int nbmat,
   int *mbval, int *nbval, int ngrids, int *npval, int *nqval, long *maxMem);
 extern int HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
