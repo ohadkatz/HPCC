@@ -112,6 +112,9 @@ typedef struct {
   int DGEMM_N;
   int DGEMM_MatSize[HPL_MAX_PARAM];
   int DGEMM_MatRep[HPL_MAX_PARAM];
+
+  int STREAM_UserVector[HPL_MAX_PARAM];
+  int STREAM_N;
 } HPCC_Params;
 /*
 This is what needs to be done to add a new benchmark:
