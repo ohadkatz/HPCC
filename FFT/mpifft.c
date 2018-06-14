@@ -22,7 +22,7 @@ MPIFFT0(HPCC_Params *params, int doIO, FILE *outFile, MPI_Comm comm, int locN,
   hpcc_fftw_mpi_plan ip;
   int sAbort, rAbort;
 #ifdef USING_FFTW
-  int ilocn, iloc0, ialocn, ialoc0, itls;
+  long int ilocn, iloc0, ialocn, ialoc0, itls;
 #endif
 
   failure = 1;
