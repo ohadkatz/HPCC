@@ -184,11 +184,19 @@ HPCC_InputFileInit(HPCC_Params *params) {
     /*Want to make sure that each matrix has a repetition value*/
     assert(n == params->DGEMM_N);
 
+    /*Pull Stream Vectors*/
     line++;
     fgets(buf, nbuf, f);
     params->STREAM_N = ReadInts(buf , HPL_MAX_PARAM, params->STREAM_UserVector)+1;
 
     
+    /*Pull # of Repetitions needed for STREAM*/
+
+    line++;
+    fgets(buf,nbuf,f);
+    n= ReadInts(buf, HPL_MAX_PARAM, params->STREAM_repetitions)+1;
+    assert(n== params->STREAM_N);
+  
     ioErr = 0;
     ioEnd:
     if (f) fclose( f );
@@ -299,8 +307,8 @@ HPCC_Init(HPCC_Params *params) {
   HPCC_InputFileInit( params );
 
   params->RunHPL = 0;
-  params->RunStarDGEMM = 1;
-  params->RunSingleDGEMM = 1;
+  params->RunStarDGEMM = 0;
+  params->RunSingleDGEMM = 0;
   params->RunPTRANS = 0;
   params->RunStarStream = 1;
   params->RunSingleStream = 1;
