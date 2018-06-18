@@ -167,9 +167,9 @@ main(int argc, char *argv[]) {
  
   fprintf( outputFile, "Begin of StarDGEMM section.\n" );
   END_IO( myRank, outputFile );
-  BEGIN_IO( myRank, results, Rfile);
+ 
   if (params.RunStarDGEMM) HPCC_StarDGEMM( &params );
-  END_IO( myRank, Rfile );
+ 
   time( &currentTime );
   BEGIN_IO( myRank, outFname, outputFile);
   fprintf( outputFile,"Current time (%ld) is %s\n",(long)currentTime,ctime(&currentTime));
@@ -204,8 +204,9 @@ main(int argc, char *argv[]) {
   BEGIN_IO( myRank, outFname, outputFile);
   fprintf( outputFile, "Begin of StarSTREAM section.\n" );
   END_IO( myRank, outputFile );
-
+ 
   if (params.RunStarStream) HPCC_StarStream( &params );
+  
 
   time( &currentTime );
   BEGIN_IO( myRank, outFname, outputFile);
