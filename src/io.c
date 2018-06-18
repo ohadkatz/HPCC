@@ -183,7 +183,20 @@ HPCC_InputFileInit(HPCC_Params *params) {
     n = ReadInts( buf, HPL_MAX_PARAM, params->DGEMM_MatRep) + 1;
     /*Want to make sure that each matrix has a repetition value*/
     assert(n == params->DGEMM_N);
+
+    /*Pull Stream Vectors*/
+    line++;
+    fgets(buf, nbuf, f);
+    params->STREAM_N = ReadInts(buf , HPL_MAX_PARAM, params->STREAM_UserVector)+1;
+
     
+    /*Pull # of Repetitions needed for STREAM*/
+    line++;
+    fgets(buf,nbuf,f);
+    
+    n = ReadInts(buf, HPL_MAX_PARAM, params->STREAM_repetitions) + 1;
+    assert(n== params->STREAM_N);
+  
     ioErr = 0;
     ioEnd:
     if (f) fclose( f );
@@ -240,8 +253,9 @@ HPCC_Init(HPCC_Params *params) {
   int myRank, commSize;
   int i, nMax, nbMax, procCur, procMax, procMin, errCode;
   double totalMem;
-  char inFname[12] = "hpccinf.txt", outFname[13] = "hpccoutf.txt";
+  char inFname[12] = "hpccinf.txt", outFname[13] = "hpccoutf.txt", results[14] = "results.txt";
   FILE *outputFile;
+  FILE *Rfile;
   MPI_Comm comm = MPI_COMM_WORLD;
   time_t currentTime;
   char hostname[MPI_MAX_PROCESSOR_NAME + 1]; int hostnameLen;
@@ -251,16 +265,19 @@ HPCC_Init(HPCC_Params *params) {
 #endif
 
   outputFile = NULL;
-
+  /*Added*/
+  Rfile= NULL;
   MPI_Comm_size( comm, &commSize );
   MPI_Comm_rank( comm, &myRank );
 
   strcpy( params->inFname, inFname );
   strcpy( params->outFname, outFname );
-
+  /*ADDED*/
+  strcpy( params->results, results );
   if (0 == myRank)
     outputFile = fopen( params->outFname, "a" );
-
+    /*ADDED R results*/
+    Rfile = fopen(params->results, "a");
   errCode = 0;
   if (sizeof(u64Int) < 8 || sizeof(s64Int) < 8) errCode = 1;
   if (ErrorReduce( outputFile, "No 64-bit integer type available.", errCode, comm ))
@@ -270,7 +287,6 @@ HPCC_Init(HPCC_Params *params) {
   if (i) hostname[0] = 0;
   else hostname[Mmax(hostnameLen, MPI_MAX_PROCESSOR_NAME)] = 0;
   time( &currentTime );
-
   BEGIN_IO( myRank, params->outFname, outputFile );
   fprintf( outputFile,
             "########################################################################\n" );
@@ -297,8 +313,8 @@ HPCC_Init(HPCC_Params *params) {
   params->RunStarDGEMM = 1;
   params->RunSingleDGEMM = 1;
   params->RunPTRANS = 0;
-  params->RunStarStream = 0;
-  params->RunSingleStream = 0;
+  params->RunStarStream = 1;
+  params->RunSingleStream = 1;
   params->RunMPIRandomAccess_LCG = 0;
   params->RunStarRandomAccess_LCG = 0;
   params->RunSingleRandomAccess_LCG = 0;
@@ -513,16 +529,16 @@ HPCC_Finalize(HPCC_Params *params) {
   // fprintf( outputFile, "RandomAccess_N=" FSTR64 "\n", params->RandomAccess_N );
   // fprintf( outputFile, "StarRandomAccess_GUPs=%g\n", params->StarGUPs );
   // fprintf( outputFile, "SingleRandomAccess_GUPs=%g\n", params->SingleGUPs );
-  // fprintf( outputFile, "STREAM_VectorSize=%d\n", params->StreamVectorSize );
-  // fprintf( outputFile, "STREAM_Threads=%d\n", params->StreamThreads );
-  // fprintf( outputFile, "StarSTREAM_Copy=%g\n", params->StarStreamCopyGBs );
-  // fprintf( outputFile, "StarSTREAM_Scale=%g\n", params->StarStreamScaleGBs );
-  // fprintf( outputFile, "StarSTREAM_Add=%g\n", params->StarStreamAddGBs );
-  // fprintf( outputFile, "StarSTREAM_Triad=%g\n", params->StarStreamTriadGBs );
-  // fprintf( outputFile, "SingleSTREAM_Copy=%g\n", params->SingleStreamCopyGBs );
-  // fprintf( outputFile, "SingleSTREAM_Scale=%g\n", params->SingleStreamScaleGBs );
-  // fprintf( outputFile, "SingleSTREAM_Add=%g\n", params->SingleStreamAddGBs );
-  // fprintf( outputFile, "SingleSTREAM_Triad=%g\n", params->SingleStreamTriadGBs );
+  fprintf( outputFile, "STREAM_VectorSize=%d\n", params->StreamVectorSize );
+  fprintf( outputFile, "STREAM_Threads=%d\n", params->StreamThreads );
+  fprintf( outputFile, "StarSTREAM_Copy=%g\n", params->StarStreamCopyGBs );
+  fprintf( outputFile, "StarSTREAM_Scale=%g\n", params->StarStreamScaleGBs );
+  fprintf( outputFile, "StarSTREAM_Add=%g\n", params->StarStreamAddGBs );
+  fprintf( outputFile, "StarSTREAM_Triad=%g\n", params->StarStreamTriadGBs );
+  fprintf( outputFile, "SingleSTREAM_Copy=%g\n", params->SingleStreamCopyGBs );
+  fprintf( outputFile, "SingleSTREAM_Scale=%g\n", params->SingleStreamScaleGBs );
+  fprintf( outputFile, "SingleSTREAM_Add=%g\n", params->SingleStreamAddGBs );
+  fprintf( outputFile, "SingleSTREAM_Triad=%g\n", params->SingleStreamTriadGBs );
   // fprintf( outputFile, "FFT_N=%d\n", params->FFT_N );
   // fprintf( outputFile, "StarFFT_Gflops=%g\n",   params->StarFFTGflops );
   // fprintf( outputFile, "SingleFFT_Gflops=%g\n", params->SingleFFTGflops );

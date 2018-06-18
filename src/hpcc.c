@@ -10,7 +10,10 @@ int
 main(int argc, char *argv[]) {
   int myRank, commSize;
   char *outFname;
+  /*Added*/
+  char *results;
   FILE *outputFile;
+  FILE *Rfile;
   HPCC_Params params;
   time_t currentTime;
   void *extdata;
@@ -27,7 +30,7 @@ main(int argc, char *argv[]) {
   MPI_Comm_rank( MPI_COMM_WORLD, &myRank );
 
   outFname = params.outFname;
-
+  results = params.results;
   /* -------------------------------------------------- */
   /*                 MPI RandomAccess                   */
   /* -------------------------------------------------- */
@@ -161,16 +164,18 @@ main(int argc, char *argv[]) {
   MPI_Barrier( MPI_COMM_WORLD );
 
   BEGIN_IO( myRank, outFname, outputFile);
+ 
   fprintf( outputFile, "Begin of StarDGEMM section.\n" );
   END_IO( myRank, outputFile );
-
+  BEGIN_IO( myRank, results, Rfile);
   if (params.RunStarDGEMM) HPCC_StarDGEMM( &params );
-
+  END_IO( myRank, Rfile );
   time( &currentTime );
   BEGIN_IO( myRank, outFname, outputFile);
   fprintf( outputFile,"Current time (%ld) is %s\n",(long)currentTime,ctime(&currentTime));
   fprintf( outputFile, "End of StarDGEMM section.\n" );
   END_IO( myRank, outputFile );
+ 
 
   /* -------------------------------------------------- */
   /*                    SingleDGEMM                     */
@@ -183,13 +188,13 @@ main(int argc, char *argv[]) {
   END_IO( myRank, outputFile );
 
   if (params.RunSingleDGEMM) HPCC_SingleDGEMM( &params );
-
+ 
   time( &currentTime );
   BEGIN_IO( myRank, outFname, outputFile);
   fprintf( outputFile,"Current time (%ld) is %s\n",(long)currentTime,ctime(&currentTime));
   fprintf( outputFile, "End of SingleDGEMM section.\n" );
   END_IO( myRank, outputFile );
-
+  
   /* -------------------------------------------------- */
   /*                    StarSTREAM                      */
   /* -------------------------------------------------- */

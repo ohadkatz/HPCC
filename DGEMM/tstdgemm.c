@@ -8,30 +8,28 @@
 /* Generates random matrix with entries between 0.0 and 1.0 */
 
 
-double Max(double arr[], int size){
-  double max= arr[0];
-  int i;
-  for(i=0; i<size;i++){
-    if (arr[i]>max ){
-      max= arr[i];
+/*
+ *Baseline DGEMM(No optimization)
+ *AUTHOR= Ohad Katz
+ *UB Center for Computational Research
+ */
+/* C[i][j]=Σa[i][k]*b[k][j] */
+static void 
+ODGEMM_Calc(double *a, double *b, double *c, int N){
+  int i,j,k;
+  double sum;
+  for (i=0; i<N; i++){
+
+    for (j=0;j<N; j++){
+      c[i+j*N] = 0;
+    
+      for(k=0;k<N;k++){
+        c[i+j*N] += a[i+k*N]*b[k+j*N];
+      }
     }
   }
-  return max;
 }
 
-double Min(double arr[], int size){
-double min= arr[0];
-int i;
-  for(i=0; i<size;i++){
-    if (arr[i]<min && arr[i]>0){
-      min= arr[i];
-    }
-    if (arr[i]<=0){
-      continue;
-    }
-  }
-  return min;
-}
 
 static void
 dmatgen(int m, int n, double *a, int lda, int seed) {
@@ -77,11 +75,13 @@ dnrm_inf(int m, int n, double *a, int lda) {
 
   return mx;
 }
+
+
 double
 HPCC_DGEMM_Calculation(int n, int doIO, double *UGflops, int *Un, int *Ufailure, double *GFLOPVAL){
   int i,j,lda, ldb, ldc, failure = 1;
   double *a=NULL, *b=NULL, *c=NULL, *x=NULL, *y=NULL, *z=NULL, alpha, beta, sres, cnrm, xnrm;
-  double Gflops = 0.0, dn, t0, t1;
+  double Gflops = 0.0, oGflops=0.0, dn,oN, t0, t1;
   long l_n;
   int seed_a, seed_b, seed_c, seed_x;
   if (n < 0) n = -n; /* if 'n' has overflown an integer */
@@ -96,7 +96,7 @@ HPCC_DGEMM_Calculation(int n, int doIO, double *UGflops, int *Un, int *Ufailure,
   y = HPCC_XMALLOC( double, l_n );
   z = HPCC_XMALLOC( double, l_n );
 
-  
+ 
   seed_a = (int)time( NULL );
   dmatgen( n, n, a, n, seed_a );
 
@@ -113,14 +113,19 @@ HPCC_DGEMM_Calculation(int n, int doIO, double *UGflops, int *Un, int *Ufailure,
   beta  = b[n / 2];
 
   t0 = MPI_Wtime();
+  
+  // FOR EDUCATIONAL PURPOSES: Unoptimized Matrix-Matrix Multiplication= ODGEMM_Calc(a,b,c,n);
+ 
   HPL_dgemm( HplColumnMajor, HplNoTrans, HplNoTrans, n, n, n, alpha, a, n, b, n, beta, c, n );
+ 
   t1 = MPI_Wtime();
-  //printf("n = %d\nt1 =%f\nt0= %f\n",n , t1,t0);
   t1 -= t0;
   dn = (double)n;
   if (t1 != 0.0 && t1 != -0.0){
     Gflops = 2.0e-9 * dn * dn * dn / t1;
+    // oGflops= 2.0e-9 * oN *oN *oN/t1;
     *GFLOPVAL = Gflops;
+    // *OGflop= oGflops;
   }
   else
     Gflops = 0.0;
@@ -159,20 +164,29 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
   double sres, cnrm, xnrm,max,min;
   double Gflop = 0.0,start,end;
   FILE *outFile;
+  FILE *Rfile;
   double timer[params->DGEMM_N];
   double maximums[params->DGEMM_N], minimums[params->DGEMM_N], avg[params->DGEMM_N], sresArr[params->DGEMM_N],stddev[params->DGEMM_N], sum[params->DGEMM_N];
   double avgSquare,sumSquare;
-  FILE *Rfile= fopen("/home/ohadkatz/HPCC/RFiles/Rinput.txt", "w");
-  fprintf(Rfile,"N,RunID,GFLOPS\n");
+
   if (doIO) {
     
     outFile = fopen( params->outFname, "a" );
-    if (! outFile) {
+    /*Added*/
+    Rfile = fopen( params-> results, "a");
+    if (! outFile ) {
       outFile = stderr;
       fprintf( outFile, "Cannot open output file.\n" );
       return 1;
     }
+    /*Added*/
+    if(! Rfile) {
+      Rfile=stderr;
+      fprintf( Rfile, "Cannot output file.\n");
+      return 1;
+    }
   }
+  fprintf(Rfile,"N,RunID,GFLOPS\n");
   /*
   * AUTHOR= OHAD KATZ
   * 
@@ -197,13 +211,12 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
   /*Iterate through each Matrix Size and repeat operations on it*/
   for(int i_matrix = 0; i_matrix< params->DGEMM_N; i_matrix++){
       int repetitions= params->DGEMM_MatRep[i_matrix];
-      double Gflop;
+      double Gflop, OGflop;
       avg[i_matrix] = 0; 
       sum[i_matrix] = 0;
       max = 0;
       min = INT_MAX;
       start = MPI_Wtime();
-
       for (int repnum = 0 ; repnum < repetitions; repnum++){\
         /*Set n to fixed size array in Input File*/
         n = params->DGEMM_MatSize[i_matrix]; 
@@ -230,7 +243,7 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
       /*Calculations for each fixed size matrix*/
       avg[i_matrix] = sum[i_matrix]/repetitions;
       avgSquare= avg[i_matrix]*avg[i_matrix];
-      stddev[i_matrix]= sqrt((stddev[i_matrix]/repetitions)-avgSquare);
+      stddev[i_matrix]= sqrt(abs((stddev[i_matrix]/repetitions)-avgSquare));
       
       end = MPI_Wtime();
       start = end-start;
@@ -249,11 +262,12 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
       
       fprintf(outFile, "---------------------------------------------------------\n");
     }
+
   /*OUTPUT TABLE*/
   fprintf(outFile, "|----------------------------------------------------------------------------------------|\n" );
   fprintf(outFile,"|%-10s %-10s %-10s  %-10s  %-10s%-10s %-10s %-10s\n", "Mat.Size", "Repeat Amt.", "Tot.Time(s)", "Avg GFLOP", "Std.Dev",  "Min GFLOP","Max GFLOP", "Scal.Res|");
   fprintf(outFile, "|----------------------------------------------------------------------------------------|\n" );
-  for(i = 0 ; i< params->DGEMM_N; i++){
+  for(i = 1 ; i< params->DGEMM_N; i++){
     fprintf(outFile,"%10d %10d  %10.2f %10.2f %10.2f %10.2f %10.2f  %10.2E\n", params->DGEMM_MatSize[i], params->DGEMM_MatRep[i], timer[i], avg[i],stddev[i], minimums[i],maximums[i], sresArr[i]);
   }
   
