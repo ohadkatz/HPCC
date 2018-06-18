@@ -277,7 +277,7 @@ HPCC_Init(HPCC_Params *params) {
   if (0 == myRank)
     outputFile = fopen( params->outFname, "a" );
     /*ADDED R results*/
-    Rfile = fopen(params->results, "a");
+    Rfile = fopen(params->results, "w");
   errCode = 0;
   if (sizeof(u64Int) < 8 || sizeof(s64Int) < 8) errCode = 1;
   if (ErrorReduce( outputFile, "No 64-bit integer type available.", errCode, comm ))
