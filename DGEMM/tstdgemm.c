@@ -164,20 +164,29 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
   double sres, cnrm, xnrm,max,min;
   double Gflop = 0.0,start,end;
   FILE *outFile;
+  FILE *Rfile;
   double timer[params->DGEMM_N];
   double maximums[params->DGEMM_N], minimums[params->DGEMM_N], avg[params->DGEMM_N], sresArr[params->DGEMM_N],stddev[params->DGEMM_N], sum[params->DGEMM_N];
   double avgSquare,sumSquare;
-  FILE *Rfile= fopen("/home/ohadkatz/HPCC/RFiles/Rinput.txt", "w");
-  fprintf(Rfile,"N,RunID,GFLOPS\n");
+
   if (doIO) {
     
     outFile = fopen( params->outFname, "a" );
-    if (! outFile) {
+    /*Added*/
+    Rfile = fopen( params-> results, "a");
+    if (! outFile ) {
       outFile = stderr;
       fprintf( outFile, "Cannot open output file.\n" );
       return 1;
     }
+    /*Added*/
+    if(! Rfile) {
+      Rfile=stderr;
+      fprintf( Rfile, "Cannot output file.\n");
+      return 1;
+    }
   }
+  fprintf(Rfile,"N,RunID,GFLOPS\n");
   /*
   * AUTHOR= OHAD KATZ
   * 

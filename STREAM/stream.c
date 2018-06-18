@@ -177,7 +177,7 @@ static int array_elements;
 /* Some compilers require an extra keyword to recognize the "restrict" qualifier. */
 static double * restrict a, * restrict b, * restrict c;
 static double avgtime[4] = {0}, maxtime[4] = {0},
-  mintime[4] = {FLT_MAX,FLT_MAX,FLT_MAX,FLT_MAX};
+              mintime[4] = {FLT_MAX,FLT_MAX,FLT_MAX,FLT_MAX};
 
 static char *label[4] = {"Copy:      ", "Scale:     ", "Add:       ", "Triad:     "};
 
@@ -395,6 +395,8 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
          VectorAvg[params->STREAM_N],
          VectorMax[params->STREAM_N],
          VectorMin[params->STREAM_N];
+
+  
   if (doIO) {
     outFile = fopen( params->outFname, "a" );
     if (! outFile) {
@@ -409,10 +411,13 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
   MPI_Comm_size( comm, &numranks );
   MPI_Comm_rank( comm, &myrank );
   for(i_vector= 0; i_vector < params->STREAM_N; i_vector++){
-   
-    double  scalar, t,  t1, times[4][NTIMES], times_copy[4][NTIMES];
+    int repetitions= params->STREAM_repetitions[i_vector];
+    
+
+    double  scalar, t,  t1, times[4][repetitions], times_copy[4][repetitions];
 
     double GiBs = 1024.0 * 1024.0 * 1024.0, curGBs=0;
+    
     
     array_elements =params->STREAM_UserVector[i_vector]; /* Need 3 vectors */
   
@@ -448,13 +453,14 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
       fprintf( outFile, "Array size = %d, Offset = %d\n" , array_elements, OFFSET);
       fprintf( outFile, "Total memory required = %.4f GiB.\n",
               (3.0 * BytesPerWord) * ( (double) array_elements / GiBs));
-      fprintf( outFile, "Each test is run %d times.\n", NTIMES );
+      fprintf( outFile, "Each test is run %d times.\n", repetitions );
       fprintf( outFile, " The *best* time for each kernel (excluding the first iteration)\n" );
       fprintf( outFile, " will be used to compute the reported bandwidth.\n");
       fprintf( outFile, "The SCALAR value used for this run is %f\n", SCALAR );
 
     }
 
+  
     #ifdef _OPENMP
         if (doIO) fprintf( outFile, HLINE);
     #pragma omp parallel private(k)
@@ -543,8 +549,11 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
        this should not cause a problem for arrays that are large enough to satisfy
        the STREAM run rules. */
 
+   
     scalar = SCALAR;
-    for (k=0; k<NTIMES; k++) {
+    for (k=0; k<repetitions; k++) {
+        
+        /**/
         /* kernel 1: Copy */
         MPI_Barrier( comm );
         times[0][k] = MPI_Wtime();
@@ -604,10 +613,10 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
     #endif
             MPI_Barrier( comm );
             times[3][k] = MPI_Wtime() - times[3][k];
-        }
-
+     
+    
     t0 = MPI_Wtime();
-  
+    
     /* --- SUMMARY --- */
 
     /* Because of the MPI_Barrier() calls, the timings from any thread are equally valid.
@@ -615,10 +624,10 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
       timings across all the MPI ranks. */
 
     memcpy(times_copy, times, sizeof times_copy );
-
+  
     /* for each iteration and each kernel, collect the minimum time across all MPI ranks */
-    MPI_Allreduce( times_copy, times, 4*NTIMES, MPI_DOUBLE, MPI_MIN, comm );
-
+    MPI_Allreduce( times_copy, times, 4*repetitions, MPI_DOUBLE, MPI_MIN, comm );
+    }
     /* Back to the original code, but now using the minimum global timing across all ranks */
     for (j=0; j<4; j++)
     {
@@ -627,7 +636,7 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
       maxtime[j] = times[j][1];
       
     }
-    for (k=1; k<NTIMES; k++) /* note -- skip first iteration */
+    for (k=1; k<repetitions; k++) /* note -- skip first iteration */
     {
       for (j=0; j<4; j++)
       {
@@ -641,7 +650,7 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
     if (doIO)
       fprintf( outFile, "Function      Rate (GB/s)   Avg time     Min time     Max time\n");
     for (j=0; j<4; j++) {
-      avgtime[j] /= (double)(NTIMES - 1); /* note -- skip first iteration */
+      avgtime[j] /= (double)(params->STREAM_repetitions[i_vector] - 1); /* note -- skip first iteration */
 
       /* make sure no division by zero */
       gbVector[i_vector] = (mintime[j] > 0.0 ? 1.0 / mintime[j] : -1.0);

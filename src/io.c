@@ -191,10 +191,10 @@ HPCC_InputFileInit(HPCC_Params *params) {
 
     
     /*Pull # of Repetitions needed for STREAM*/
-
     line++;
     fgets(buf,nbuf,f);
-    n= ReadInts(buf, HPL_MAX_PARAM, params->STREAM_repetitions)+1;
+    
+    n = ReadInts(buf, HPL_MAX_PARAM, params->STREAM_repetitions) + 1;
     assert(n== params->STREAM_N);
   
     ioErr = 0;
@@ -253,8 +253,9 @@ HPCC_Init(HPCC_Params *params) {
   int myRank, commSize;
   int i, nMax, nbMax, procCur, procMax, procMin, errCode;
   double totalMem;
-  char inFname[12] = "hpccinf.txt", outFname[13] = "hpccoutf.txt";
+  char inFname[12] = "hpccinf.txt", outFname[13] = "hpccoutf.txt", results[14] = "results.txt";
   FILE *outputFile;
+  FILE *Rfile;
   MPI_Comm comm = MPI_COMM_WORLD;
   time_t currentTime;
   char hostname[MPI_MAX_PROCESSOR_NAME + 1]; int hostnameLen;
@@ -264,16 +265,19 @@ HPCC_Init(HPCC_Params *params) {
 #endif
 
   outputFile = NULL;
-
+  /*Added*/
+  Rfile= NULL;
   MPI_Comm_size( comm, &commSize );
   MPI_Comm_rank( comm, &myRank );
 
   strcpy( params->inFname, inFname );
   strcpy( params->outFname, outFname );
-
+  /*ADDED*/
+  strcpy( params->results, results );
   if (0 == myRank)
     outputFile = fopen( params->outFname, "a" );
-
+    /*ADDED R results*/
+    Rfile = fopen(params->results, "a");
   errCode = 0;
   if (sizeof(u64Int) < 8 || sizeof(s64Int) < 8) errCode = 1;
   if (ErrorReduce( outputFile, "No 64-bit integer type available.", errCode, comm ))
@@ -283,7 +287,6 @@ HPCC_Init(HPCC_Params *params) {
   if (i) hostname[0] = 0;
   else hostname[Mmax(hostnameLen, MPI_MAX_PROCESSOR_NAME)] = 0;
   time( &currentTime );
-
   BEGIN_IO( myRank, params->outFname, outputFile );
   fprintf( outputFile,
             "########################################################################\n" );
@@ -307,8 +310,8 @@ HPCC_Init(HPCC_Params *params) {
   HPCC_InputFileInit( params );
 
   params->RunHPL = 0;
-  params->RunStarDGEMM = 0;
-  params->RunSingleDGEMM = 0;
+  params->RunStarDGEMM = 1;
+  params->RunSingleDGEMM = 1;
   params->RunPTRANS = 0;
   params->RunStarStream = 1;
   params->RunSingleStream = 1;
