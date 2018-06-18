@@ -94,20 +94,19 @@ MPlib        =
 # used. The variable LAdir is only used for defining LAinc and LAlib.
 #
 
-MKLROOT=     /home/ohadkatz/HPCC/hpl/lib/mkl
+INTELLIBS = /home/ohadkatz/intel/compilers_and_libraries_2018.2.199/linux/compiler/lib/intel64
+MKLROOT=     /home/ohadkatz/intel/mkl
 LAdir        = ${MKLROOT}/lib/
-LAinc        = -DMKL_ILP64 -m64 -I$(MKLROOT)/include 
-LAlib        =  ${MKLROOT}/lib/intel64/libmkl_scalapack_ilp64.a -Wl,--start-group \
-                ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a \
-                ${MKLROOT}/lib/intel64/libmkl_sequential.a \
+LAinc        =  -DMKL_ILP64 -I${MKLROOT}/include -I${MKLROOT}/include/fftw
+LAlib        =  -L${INTELLIBS} \
+                -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a \
+                ${MKLROOT}/lib/intel64/libmkl_intel_thread.a\
                 ${MKLROOT}/lib/intel64/libmkl_core.a \
-                ${MKLROOT}/lib/intel64/libmkl_blacs_intelmpi_ilp64.a\
-                ${MKLROOT}/lib/intel64/libmkl_blacs_intelmpi_lp64.a\
                 ${MKLROOT}/lib/intel64/libmkl_cdft_core.a \
                 ${MKLROOT}/lib/intel64/libfftw2xc_double_gnu.a \
-                ${MKLROOT}/lib/intel64/libfftw2x_cdft_DOUBLE_ilp64.a\
-                -Wl,--end-group -lpthread -lm -ldl
-
+                ${MKLROOT}/lib/intel64/libmkl_blacs_intelmpi_ilp64.a \
+                ${MKLROOT}/lib/intel64/libfftw2x_cdft_DOUBLE_ilp64.a \
+                -Wl,--end-group -liomp5 -lpthread -lm -ldl
 
 #
 # ----------------------------------------------------------------------
