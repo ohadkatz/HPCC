@@ -520,8 +520,7 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
-    for (j = 0; j < array_elements; j++)
-      a[j] = 2.0E0 * a[j];
+    for (j = 0; j < array_elements; j++) a[j] = 2.0E0 * a[j];
     t = 1.0E6 * (MPI_Wtime() - t);
 
     if (doIO) {
@@ -551,9 +550,8 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
 
    
     scalar = SCALAR;
-    for (k=0; k<repetitions; k++) {
-        
-        /**/
+    for (k=0; k < repetitions; k++) {
+
         /* kernel 1: Copy */
         MPI_Barrier( comm );
         times[0][k] = MPI_Wtime();
@@ -593,7 +591,7 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
-            for (j=0; j<array_elements; j++)
+            for (j=0; j < array_elements; j++)
               c[j] = a[j]+b[j];
     #endif
             MPI_Barrier( comm );
@@ -613,7 +611,7 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
     #endif
             MPI_Barrier( comm );
             times[3][k] = MPI_Wtime() - times[3][k];
-     
+    }
     
     t0 = MPI_Wtime();
     
@@ -627,7 +625,7 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
   
     /* for each iteration and each kernel, collect the minimum time across all MPI ranks */
     MPI_Allreduce( times_copy, times, 4*repetitions, MPI_DOUBLE, MPI_MIN, comm );
-    }
+    
     /* Back to the original code, but now using the minimum global timing across all ranks */
     for (j=0; j<4; j++)
     {
@@ -650,13 +648,14 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
     if (doIO)
       fprintf( outFile, "Function      Rate (GB/s)   Avg time     Min time     Max time\n");
     for (j=0; j<4; j++) {
-      avgtime[j] /= (double)(params->STREAM_repetitions[i_vector] - 1); /* note -- skip first iteration */
-
+      
+      avgtime[j] /= (double)(repetitions - 1); /* note -- skip first iteration */
+      
       /* make sure no division by zero */
       gbVector[i_vector] = (mintime[j] > 0.0 ? 1.0 / mintime[j] : -1.0);
 
       gbVector[i_vector] *= 1e-9 * bytes[j] * array_elements;
-
+      
       VectorAvg[i_vector]= avgtime[j];
       VectorMax[i_vector]= maxtime[j];
       VectorMin[i_vector]= mintime[j];
@@ -676,8 +675,8 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
         case 1: *scaleGBs = gbVector[i_vector]; break;
         case 2: *addGBs = gbVector[i_vector]; break;
         case 3: *triadGBs = gbVector[i_vector]; break;
+        }
       }
-    }
     }
     if (doIO)
       fprintf( outFile, HLINE);
