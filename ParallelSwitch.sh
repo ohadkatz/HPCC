@@ -1,46 +1,63 @@
 #!/bin/bash
 
-
-if [[ -e hpccoutf.txt ]];
-then
-    rm hpccoutf.txt
-    printf "removing Output File \n"
-    echo hello
-fi
-if [[ -e hpccoutTP.txt ]];
-then   
-    rm hpccoutTP.txt hpccoutS.txt hpccoutEP.txt
-    printf "removing Unnecessary Files \n"
-fi
+#  
+#  -- High Performance Computing Parallel Analysis              
+#                               
+#     Ohad Katz 
+#     SUMMER 2018                                           
+#     University at Buffalo                                
+#     Center for Computational Research                                                    
+#
+cat .DGEMMtesting.txt
+printf "Beginning Tests \n"
 
 make arch=intel64_icc
-sed -n 37,38p hpccinf.txt 
+#
+# PART 1: MULTI NODES
+#
 
-touch hpccoutTP.txt hpccoutS.txt hpccoutEP.txt
-cd RFiles
-touch RinputTP8threads.txt RinputEP8threads.txt RinputS8threads.txt
-cd ..
+# 
+# True Parallel
+#
+# printf("True Parallel: \n")
+# OMP_NUM_THREADS= 1 mpirun -np 2 ./hpcc
+# cp -r results.txt resultsTPmulti.txt
+# cp -r hpccoutf.txt hpccoutfTPmulti.txt
 
-printf  "TOTALLY PARALLEL RUNNING\n\n"
-OMP_NUM_THREADS=8 mpirun -np 1 ./hpcc
-cp -r hpccoutf.txt hpccoutTP.txt
-sed -n  84,200p hpccoutTP.txt
-cp -r RFiles/Rinput.txt RFiles/RinputTP8threads.txt
- 
+# #
+# # Embarassingly Parallel
+# #
+# printf("Embarassingly Parallel: \n")
+# OMP_NUM_THREADS=1 mpirun -np 2 ./hpcc
+# cp -r results.txt resultsEPmulti.txt
+# cp -r hpccoutf.txt hpccoutEPmulti.txt
 
-rm hpccoutf.txt
-printf "_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-\n"
-printf "\nSERIAL RUNNING\n"
-OMP_NUM_THREADS=1 mpirun -np 1 ./hpcc
-cp -r hpccoutf.txt hpccoutS.txt
-sed -n 84,200p hpccoutS.txt
-cp -r RFiles/Rinput.txt RFiles/RinputS8threads.txt
 
-#SEG FAULT ISSUE, fix coming soon#
-# echo EMBARASIINGLY PARALLEL RUNNING
-# OMP_NUM_THREADS=1 mpirun -np 4 ./hpcc
-# cp -r hpccoutf.txt hpccoutEP.txt
-# cp -r RFiles/Rinput.txt RFiles/RinputEP.txt
-printf "ALL DONE"
+# #
+# # PART 2 Single
+# #
+
+# #
+# # Serial
+# #
+# printf ("Serial: \n")
+# OMP_NUM_THREADS=1 mpirun -np 1 ./hpcc
+# cp -r results.txt resultsS.txt
+# cp -r hpccoutf.txt hpccoutfS.txt
+
+# #
+# #True Parallel
+# #
+# printf("True Parallel(single): \n")
+# OMP_NUM_THREADS=4 mpirun -np 1 ./hpcc
+# cp -r results.txt resultsTPsingle.txt
+# cp -r hpccoutf.txt hpccoutfTPsingle.txt
+
+# #
+# #Embarassingly Parallel
+# #
+# printf("Embarassingly Parallel(single): \n")
+# mpirun -np 2 ./hpcc
+
 
 

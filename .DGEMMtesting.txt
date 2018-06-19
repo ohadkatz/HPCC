@@ -1,0 +1,38 @@
+HPC Parallel Computing Analysis
+Author = Ohad Katz
+Mentor = Nikolay Simakov
+
+Testing Will be as follows:
+**PART 1**
+Multi Nodes:
+Parallel
+				   NUM T     MPI NP	
+ ___________________________________________________
+|		|		|	   |	    |
+|True Parallel  |   PURE MPI	|    1	   |  PPN*2 |
+|		|		|	   |	    |
+|		| OPENMP/MPI H	|   PPN	   |   NA   |
+|		| 		|	   |	    |
+|	    	|		|          |        |
+|Embarassingly	|    PURE MPI	|    1     |  PPN*2 |
+|    Parallel	|		|	   |	    |
+|_______________|_______________|__________|________|
+
+**PART 2 **
+Single:
+				   NUM T     MPI NP	
+ ___________________________________________________
+|		|		|	   |	    |
+| Serial	|      NA	|    1     |	1   |
+|		|		|	   |	    |
+|		|		|	   |	    |
+|		|		|	   |	    |
+| True Parallel | OPENMP/MPI H	|   PPN	   |	1   |
+|		| 		|	   |        |
+|		|   PURE MPI	|    1     |   PPN  |
+|		|  (scalapack)	|   	   |	    |
+|	    	|		|          |        |
+| Embarassingly	|    PURE MPI	|    1     |   PPN  |
+|    Parallel	|		|	   |	    |
+|_______________|_______________|__________|________|
+

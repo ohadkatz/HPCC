@@ -16,7 +16,7 @@ HPCC_StarDGEMM(HPCC_Params *params) {
   MPI_Comm_size( comm, &commSize );
   MPI_Comm_rank( comm, &myRank );
 
-  rv = HPCC_TestDGEMM( params, 0 == myRank ? 1 : 0, &localGflops, &n, &failure );
+  rv = HPCC_TestDGEMM( params, 0 == myRank, &localGflops, &n, &failure );
   //params->DGEMM_N = n;
 
   MPI_Reduce( &rv, &errCount, 1, MPI_INT, MPI_SUM, 0, comm );

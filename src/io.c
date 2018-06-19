@@ -222,10 +222,16 @@ HPCC_InputFileInit(HPCC_Params *params) {
   if (params->PTRANSnbs > 0)
     MPI_Bcast( &params->PTRANSnbval, params->PTRANSnbs, MPI_INT, 0, comm );
 
+  /*ADDED Ohad Katz*/
+  MPI_Bcast( &params->DGEMM_N, 1, MPI_INT, 0 , comm);
+  MPI_Bcast( &params->DGEMM_MatRep, 1, MPI_INT, 0 , comm);
+  MPI_Bcast( &params->DGEMM_MatSize, 1, MPI_INT, 0 , comm);
+  
   /* copy what HPL has */
   params->PTRANSnpqs = params->npqs;
   icopy( params->npqs, params->qval, 1, params->PTRANSqval, 1 );
   icopy( params->npqs, params->pval, 1, params->PTRANSpval, 1 );
+
 
   return ioErr;
 }
@@ -311,10 +317,10 @@ HPCC_Init(HPCC_Params *params) {
 
   params->RunHPL = 0;
   params->RunStarDGEMM = 1;
-  params->RunSingleDGEMM = 1;
+  params->RunSingleDGEMM = 0;
   params->RunPTRANS = 0;
-  params->RunStarStream = 1;
-  params->RunSingleStream = 1;
+  params->RunStarStream = 0;
+  params->RunSingleStream = 0;
   params->RunMPIRandomAccess_LCG = 0;
   params->RunStarRandomAccess_LCG = 0;
   params->RunSingleRandomAccess_LCG = 0;
