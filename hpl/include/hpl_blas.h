@@ -51,6 +51,7 @@
  * ---------------------------------------------------------------------
  */
 #include "hpl_misc.h"
+
 /*
  * ---------------------------------------------------------------------
  * typedef definitions
@@ -171,6 +172,7 @@ STDC_ARGS(
 
 #define    HPL_dgemm           cblas_dgemm
 #define    HPL_dtrsm           cblas_dtrsm
+
 
 #endif
 
