@@ -155,6 +155,12 @@ STDC_ARGS(
    const enum CBLAS_DIAG,            const int,       const int,
    const double,    const double *,  const int,       double *,
    const int ) );
+
+void pdgemm( const char *transa, const char *transb, const MKL_INT *m, 
+const MKL_INT *n, const MKL_INT *k, const double *alpha, const double *a, 
+const MKL_INT *ia, const MKL_INT *ja, const MKL_INT *desca, const double *b, 
+const MKL_INT *ib, const MKL_INT *jb, const MKL_INT *descb, const double *beta, 
+double *c, const MKL_INT *ic, const MKL_INT *jc, const MKL_INT *descc );
 /*
  * ---------------------------------------------------------------------
  * HPL C BLAS macro definition
@@ -173,6 +179,8 @@ STDC_ARGS(
 #define    HPL_dgemm           cblas_dgemm
 #define    HPL_dtrsm           cblas_dtrsm
 
+#define    HPL_pgemm           pdgemm
+pdgemm
 
 #endif
 
