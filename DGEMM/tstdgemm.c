@@ -7,6 +7,7 @@
 #include <limits.h>
 #include <stdio.h>
 #include <unistd.h>
+//#include <mkl_blacs.h>
 /* Generates random matrix with entries between 0.0 and 1.0 */
 
 
@@ -78,6 +79,124 @@ dnrm_inf(int m, int n, double *a, int lda) {
   return mx;
 }
 
+/*HPCC Parallel DGEMM
+* UNIVERSITY AT BUFFALO
+* Author = Ohad Katz
+* Mentor = Nikolay Simakov
+* Center for Computational Research
+*/
+double
+HPCC_PDGEMM_Scala_Calculation(int n, int doIO, double *UGflops, int *Un, int *Ufailure, double *GFLOPVAL){
+  int i,j,lda, ldb, ldc, failure = 1;
+  double *a=NULL, *b=NULL, *c=NULL, *x=NULL, *y=NULL, *z=NULL, alpha, beta, sres, cnrm, xnrm;
+  double Gflops = 0.0, dn,oN, t0, t1;
+  long l_n;
+  const long int *cl_n;
+  int seed_a, seed_b, seed_c, seed_x;
+  long int *CONTXT, BGINIT;
+  
+  const char *N= "N"; //Probably not a good idea
+  if (n < 0) n = -n; /* if 'n' has overflown an integer */
+  
+  l_n = n;
+  cl_n = &l_n;
+  lda = ldb = ldc = n;
+
+  a = HPCC_XMALLOC( double, l_n * l_n );
+  b = HPCC_XMALLOC( double, l_n * l_n );
+  c = HPCC_XMALLOC( double, l_n * l_n );
+
+  x = HPCC_XMALLOC( double, l_n );
+  y = HPCC_XMALLOC( double, l_n );
+  z = HPCC_XMALLOC( double, l_n );
+
+ 
+  seed_a = (int)time( NULL );
+  dmatgen( n, n, a, n, seed_a );
+
+  seed_b = (int)time( NULL );
+  dmatgen( n, n, b, n, seed_b );
+
+  seed_c = (int)time( NULL );
+  dmatgen( n, n, c, n, seed_c );
+
+  seed_x = (int)time( NULL );
+  dmatgen( n, 1, x, n, seed_x );
+
+  alpha = a[n / 2];
+  beta  = b[n / 2];
+
+  const double *cd_alpha= &alpha;
+  const double *cd_beta= &beta;
+  t0 = MPI_Wtime();
+ 
+  // BLACS_GET(0, 0, CONTXT);
+ 
+  // BLACS_GRIDINIT(CONTXT, "Column-major", cl_n, cl_n);
+  long int DESC_A[9]={1,1,n,n,1,1,1,1,lda};
+
+  long int DESC_B[9]={1,1,n,n,1,1,1,1,ldb};
+
+  long int DESC_C[9]={1,1,n,n,1,1,1,1,ldc};
+  /*
+  * Parallel DGEMM outline :
+  * Trans A, Trans B, m , n , k , alpha, a , IA(First Row 1<=IA<=M_A), JA(First Column 1<=JA<=N_A), b, IB, JB, Desc_b, beta, c , IC, JC, Desc_c
+  * 
+  * Desc_A,Desc_B, Desc_c = 9 sized array: 
+  *       DTYPE_= Descriptor Type
+  *       CTX_= BLACS context
+  *       M_= # Rows in Global Matrix
+  *       N_= # Columns in Global Matrix
+  *       MB_= Block Size for Row
+  *       NB_ = Block Size for Column
+  *       RSRC_ = Process of pxq where 1st row is distributed
+  *       CSRC_ = Process of pxq where 1st column is distributed
+  *       LLD_= Leading Dimension of a
+  * 
+  */
+
+  HPL_pdgemm(N, N,  cl_n, cl_n, cl_n, cd_alpha, a, cl_n, cl_n, DESC_A, b, cl_n, cl_n, DESC_B, cd_beta, c, cl_n, cl_n, DESC_C );
+ 
+  t1 = MPI_Wtime();
+  t1 -= t0;
+  dn = (double)n;
+  if (t1 != 0.0 && t1 != -0.0){
+    Gflops = 2.0e-9 * dn * dn * dn / t1;
+  }
+
+  else
+    Gflops = 0.0;
+  
+  *GFLOPVAL = Gflops;
+  
+  cnrm = dnrm_inf( n, n, c, n );
+  xnrm = dnrm_inf( n, 1, x, n );
+
+  HPL_dgemv( HplColumnMajor, HplNoTrans, n, n, 1.0, c, ldc, x, 1, 0.0, y, 1 );
+
+  /* z <- b*x */
+  HPL_dgemv( HplColumnMajor, HplNoTrans, n, n, 1.0, b, ldb, x, 1, 0.0, z, 1 );
+  
+
+  /* y <- alpha * a * z - y */
+  HPL_dgemv( HplColumnMajor, HplNoTrans, n, n, alpha, a, lda, z, 1, -1.0, y, 1 );
+
+
+  dmatgen( n, n, c, n, seed_c );
+
+  /* y <- beta * c_orig * x + y */
+  HPL_dgemv( HplColumnMajor, HplNoTrans, n, n, beta, c, ldc, x, 1, 1.0, y, 1 );
+
+  sres = dnrm_inf( n, 1, y, n ) / cnrm / xnrm / n / HPL_dlamch( HPL_MACH_EPS );
+
+  if (z) HPCC_free( z );
+  if (y) HPCC_free( y );
+  if (x) HPCC_free( x );
+  if (c) HPCC_free( c );
+  if (b) HPCC_free( b );
+  if (a) HPCC_free( a );
+  return sres;
+}
 
 double
 HPCC_DGEMM_Calculation(int n, int doIO, double *UGflops, int *Un, int *Ufailure, double *GFLOPVAL){
@@ -125,7 +244,7 @@ HPCC_DGEMM_Calculation(int n, int doIO, double *UGflops, int *Un, int *Ufailure,
   dn = (double)n;
   if (t1 != 0.0 && t1 != -0.0){
     Gflops = 2.0e-9 * dn * dn * dn / t1;
-    // oGflops= 2.0e-9 * oN *oN *oN/t1;
+    // EDUCATIONAL : oGflops= 2.0e-9 * oN *oN *oN/t1;
    
   }
   else
@@ -225,7 +344,7 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
       for (int repnum = 0 ; repnum < repetitions; repnum++){
         /*Set n to fixed size array in Input File*/
         n = params->DGEMM_MatSize[i_matrix]; 
-        sres = HPCC_DGEMM_Calculation(n, doIO, UGflops, Un, Ufailure, &Gflop);
+        sres = HPCC_PDGEMM_Scala_Calculation(n, doIO, UGflops, Un, Ufailure, &Gflop);
         
         if (doIO) fprintf(Rfile,"%d,%d,%f\n", params->DGEMM_MatSize[i_matrix],repnum+1,Gflop);
         if (Gflop>max) max=Gflop;

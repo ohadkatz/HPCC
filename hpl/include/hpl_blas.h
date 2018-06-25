@@ -51,7 +51,7 @@
  * ---------------------------------------------------------------------
  */
 #include "hpl_misc.h"
-
+//#include "mkl_pblas.h"
 /*
  * ---------------------------------------------------------------------
  * typedef definitions
@@ -156,17 +156,22 @@ STDC_ARGS(
    const double,    const double *,  const int,       double *,
    const int ) );
 
-void pdgemm( const char *transa, const char *transb, const MKL_INT *m, 
-const MKL_INT *n, const MKL_INT *k, const double *alpha, const double *a, 
-const MKL_INT *ia, const MKL_INT *ja, const MKL_INT *desca, const double *b, 
-const MKL_INT *ib, const MKL_INT *jb, const MKL_INT *descb, const double *beta, 
-double *c, const MKL_INT *ic, const MKL_INT *jc, const MKL_INT *descc );
+void 
+pdgemm_( 
+    const char *transa, const char *transb, const MKL_INT *m, 
+    const MKL_INT *n, const MKL_INT *k, const double *alpha, const double *a, 
+    const MKL_INT *ia, const MKL_INT *ja, const MKL_INT *desca, const double *b, 
+    const MKL_INT *ib, const MKL_INT *jb, const MKL_INT *descb, const double *beta, 
+    double *c, const MKL_INT *ic, const MKL_INT *jc, const MKL_INT *descc );
+
+
 /*
  * ---------------------------------------------------------------------
  * HPL C BLAS macro definition
  * ---------------------------------------------------------------------
  */
 #define    HPL_dswap           cblas_dswap
+
 #define    HPL_dcopy           cblas_dcopy
 #define    HPL_daxpy           cblas_daxpy
 #define    HPL_dscal           cblas_dscal
@@ -179,8 +184,8 @@ double *c, const MKL_INT *ic, const MKL_INT *jc, const MKL_INT *descc );
 #define    HPL_dgemm           cblas_dgemm
 #define    HPL_dtrsm           cblas_dtrsm
 
-#define    HPL_pgemm           pdgemm
-pdgemm
+#define    HPL_pdgemm           pdgemm_
+
 
 #endif
 
@@ -330,6 +335,7 @@ pdgemm
 #define    F77dgemm               dgemm_
 #define    F77dtrsm               dtrsm_
 
+#define   F77pdgemm               pdgemm_
 #endif
 
 #ifdef Add__
