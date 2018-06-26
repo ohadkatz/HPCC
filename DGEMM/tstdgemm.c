@@ -7,6 +7,7 @@
 #include <limits.h>
 #include <stdio.h>
 #include <unistd.h>
+
 //#include <mkl_blacs.h>
 /* Generates random matrix with entries between 0.0 and 1.0 */
 
@@ -87,19 +88,21 @@ dnrm_inf(int m, int n, double *a, int lda) {
 */
 double
 HPCC_PDGEMM_Scala_Calculation(int n, int doIO, double *UGflops, int *Un, int *Ufailure, double *GFLOPVAL){
-  int i,j,lda, ldb, ldc, failure = 1;
+  int  i,j,lda, ldb, ldc, failure = 1;
   double *a=NULL, *b=NULL, *c=NULL, *x=NULL, *y=NULL, *z=NULL, alpha, beta, sres, cnrm, xnrm;
   double Gflops = 0.0, dn,oN, t0, t1;
   long l_n;
-  const long int *cl_n;
   int seed_a, seed_b, seed_c, seed_x;
-  long int *CONTXT, BGINIT;
+  long int CONTXT, BGINIT;
+  const long l_one= 1, l_zero= 0, l_negone= -1;
+  const double d_one=1, d_zero=0, d_negone=-1;
+  long int *DescA, *DescB, *DescC,info, nprocs, iam;
   
-  const char *N= "N"; //Probably not a good idea
+  const long clda= lda, cldb= ldb, cldc= ldc;
+
   if (n < 0) n = -n; /* if 'n' has overflown an integer */
-  
+
   l_n = n;
-  cl_n = &l_n;
   lda = ldb = ldc = n;
 
   a = HPCC_XMALLOC( double, l_n * l_n );
@@ -126,19 +129,24 @@ HPCC_PDGEMM_Scala_Calculation(int n, int doIO, double *UGflops, int *Un, int *Uf
   alpha = a[n / 2];
   beta  = b[n / 2];
 
-  const double *cd_alpha= &alpha;
-  const double *cd_beta= &beta;
   t0 = MPI_Wtime();
+  /*=====================PARALLEL INITILIZATION============================*/
+  HPL_blacspinfo( &iam, &nprocs );
+  HPL_blacsget(&l_negone, &l_zero, &CONTXT);
+  HPL_blacsgridinit(&CONTXT, "R", &nprocs, &l_one);
  
-  // BLACS_GET(0, 0, CONTXT);
- 
-  // BLACS_GRIDINIT(CONTXT, "Column-major", cl_n, cl_n);
-  long int DESC_A[9]={1,1,n,n,1,1,1,1,lda};
+  /*=======================Descriptor Array Init===========================*/
+  HPL_descinit( DescA, &l_n, &l_n, &l_n, &l_n, &l_zero, &l_zero, &CONTXT, &clda, &info );
+  HPL_descinit( DescB, &l_n, &l_n, &l_n, &l_n, &l_zero, &l_zero, &CONTXT, &cldb, &info );
+  HPL_descinit( DescC, &l_n, &l_n, &l_n, &l_n, &l_zero, &l_zero, &CONTXT, &cldc, &info );
+  
 
-  long int DESC_B[9]={1,1,n,n,1,1,1,1,ldb};
-
-  long int DESC_C[9]={1,1,n,n,1,1,1,1,ldc};
+  /*==================Broadcast Arrays Over Processess=====================*/
+  HPL_pdgeadd("N", &l_n, &l_n, &d_one, a, &l_one, &l_one, DescA, &d_zero, a, &l_one, &l_one, DescA);
+  HPL_pdgeadd("N", &l_n, &l_n, &d_one, b, &l_one, &l_one, DescB, &d_zero, b, &l_one, &l_one, DescB);
+  
   /*
+  *
   * Parallel DGEMM outline :
   * Trans A, Trans B, m , n , k , alpha, a , IA(First Row 1<=IA<=M_A), JA(First Column 1<=JA<=N_A), b, IB, JB, Desc_b, beta, c , IC, JC, Desc_c
   * 
@@ -155,7 +163,8 @@ HPCC_PDGEMM_Scala_Calculation(int n, int doIO, double *UGflops, int *Un, int *Uf
   * 
   */
 
-  HPL_pdgemm(N, N,  cl_n, cl_n, cl_n, cd_alpha, a, cl_n, cl_n, DESC_A, b, cl_n, cl_n, DESC_B, cd_beta, c, cl_n, cl_n, DESC_C );
+  /*======================================Main Calculation==========================================*/
+  HPL_pdgemm("N","N",  &l_n, &l_n, &l_n, &alpha, a, &l_one, &l_one, DescA, b, &l_one, &l_one, DescB, &beta, c, &l_one, &l_one, DescC );
  
   t1 = MPI_Wtime();
   t1 -= t0;
@@ -198,6 +207,8 @@ HPCC_PDGEMM_Scala_Calculation(int n, int doIO, double *UGflops, int *Un, int *Uf
   return sres;
 }
 
+
+
 double
 HPCC_DGEMM_Calculation(int n, int doIO, double *UGflops, int *Un, int *Ufailure, double *GFLOPVAL){
   int i,j,lda, ldb, ldc, failure = 1;
@@ -217,7 +228,6 @@ HPCC_DGEMM_Calculation(int n, int doIO, double *UGflops, int *Un, int *Ufailure,
   y = HPCC_XMALLOC( double, l_n );
   z = HPCC_XMALLOC( double, l_n );
 
- 
   seed_a = (int)time( NULL );
   dmatgen( n, n, a, n, seed_a );
 

@@ -275,7 +275,6 @@ HPCC_Init(HPCC_Params *params) {
   Rfile= NULL;
   MPI_Comm_size( comm, &commSize );
   MPI_Comm_rank( comm, &myRank );
-
   strcpy( params->inFname, inFname );
   strcpy( params->outFname, outFname );
   /*ADDED*/
@@ -288,7 +287,6 @@ HPCC_Init(HPCC_Params *params) {
   if (sizeof(u64Int) < 8 || sizeof(s64Int) < 8) errCode = 1;
   if (ErrorReduce( outputFile, "No 64-bit integer type available.", errCode, comm ))
     return -1;
-
   i = MPI_Get_processor_name( hostname, &hostnameLen );
   if (i) hostname[0] = 0;
   else hostname[Mmax(hostnameLen, MPI_MAX_PROCESSOR_NAME)] = 0;
