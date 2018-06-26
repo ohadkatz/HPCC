@@ -164,6 +164,24 @@ pdgemm_(
     const MKL_INT *ib, const MKL_INT *jb, const MKL_INT *descb, const double *beta, 
     double *c, const MKL_INT *ic, const MKL_INT *jc, const MKL_INT *descc );
 
+void    blacs_get_(const MKL_INT *ConTxt, const MKL_INT *what, MKL_INT *val);
+
+void    blacs_gridinit_(MKL_INT *ConTxt, const char *layout, const MKL_INT *nprow, const MKL_INT *npcol);
+
+void descinit_(MKL_INT* desc, const MKL_INT* m, const MKL_INT* n,
+               const MKL_INT* mb, const MKL_INT* nb, const MKL_INT* irsrc,
+               const MKL_INT* icsrc, const MKL_INT* ictxt, const MKL_INT* lld,
+               MKL_INT* info);
+
+
+void    blacs_gridexit_(const MKL_INT *ConTxt);
+
+
+void pdgeadd_( const char *trans, const MKL_INT *m, const MKL_INT *n, 
+               const double *alpha, const double *a, const MKL_INT *ia, const MKL_INT *ja, 
+               const MKL_INT *desca, const double *beta, double *c, const MKL_INT *ic, 
+               const MKL_INT *jc, const MKL_INT *descc );
+void	blacs_pinfo_(MKL_INT *mypnum, MKL_INT *nprocs);
 
 /*
  * ---------------------------------------------------------------------
@@ -185,8 +203,12 @@ pdgemm_(
 #define    HPL_dtrsm           cblas_dtrsm
 
 #define    HPL_pdgemm           pdgemm_
-
-
+#define    HPL_blacsget         blacs_get_
+#define    HPL_blacsgridinit    blacs_gridinit_
+#define    HPL_descinit         descinit_
+#define    HPL_gridexit         blacs_gridexit_
+#define    HPL_pdgeadd          pdgeadd_
+#define    HPL_blacspinfo       blacs_pinfo_
 #endif
 
 #ifdef HPL_CALL_FBLAS
