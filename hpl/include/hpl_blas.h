@@ -181,6 +181,7 @@ void pdgeadd_( const char *trans, const MKL_INT *m, const MKL_INT *n,
                const double *alpha, const double *a, const MKL_INT *ia, const MKL_INT *ja, 
                const MKL_INT *desca, const double *beta, double *c, const MKL_INT *ic, 
                const MKL_INT *jc, const MKL_INT *descc );
+               
 void	blacs_pinfo_(MKL_INT *mypnum, MKL_INT *nprocs);
 
 /*
