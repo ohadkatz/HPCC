@@ -88,22 +88,20 @@ dnrm_inf(int m, int n, double *a, int lda) {
 */
 double
 HPCC_PDGEMM_Scala_Calculation(int n, int doIO, double *UGflops, int *Un, int *Ufailure, double *GFLOPVAL){
-  int  i,j,lda, ldb, ldc, failure = 1;
+  int  i,j,lda, ldb, ldc, failure = 1, ONE=1, ZERO=0;
   double *a=NULL, *b=NULL, *c=NULL, *x=NULL, *y=NULL, *z=NULL, alpha, beta, sres, cnrm, xnrm;
   double Gflops = 0.0, dn,oN, t0, t1;
   long l_n;
   int seed_a, seed_b, seed_c, seed_x;
-  long int CONTXT, BGINIT;
-  const long l_one= 1, l_zero= 0, l_negone= -1;
-  const double d_one=1, d_zero=0, d_negone=-1;
-  long int *DescA, *DescB, *DescC,info, nprocs, iam;
-  
-  const long clda= lda, cldb= ldb, cldc= ldc;
-
+  long int CONTXT, DescA[9], DescB[9], DescC[9],info, nprocs, iam;
+  const long l_one= 1, l_zero= 0, l_negone= -1; /*l = long*/
+  const double d_one=1, d_zero=0, d_negone=-1;  /*d = double*/
+ 
   if (n < 0) n = -n; /* if 'n' has overflown an integer */
 
   l_n = n;
   lda = ldb = ldc = n;
+  const long clda= lda, cldb= ldb, cldc= ldc;
 
   a = HPCC_XMALLOC( double, l_n * l_n );
   b = HPCC_XMALLOC( double, l_n * l_n );
@@ -113,7 +111,7 @@ HPCC_PDGEMM_Scala_Calculation(int n, int doIO, double *UGflops, int *Un, int *Uf
   y = HPCC_XMALLOC( double, l_n );
   z = HPCC_XMALLOC( double, l_n );
 
- 
+  //const long lld_local = Mmax( numroc_( &n, &n, &n, 0, &n ), 1 );
   seed_a = (int)time( NULL );
   dmatgen( n, n, a, n, seed_a );
 
@@ -131,20 +129,25 @@ HPCC_PDGEMM_Scala_Calculation(int n, int doIO, double *UGflops, int *Un, int *Uf
 
   t0 = MPI_Wtime();
   /*=====================PARALLEL INITILIZATION============================*/
+
   HPL_blacspinfo( &iam, &nprocs );
   HPL_blacsget(&l_negone, &l_zero, &CONTXT);
   HPL_blacsgridinit(&CONTXT, "R", &nprocs, &l_one);
  
+
   /*=======================Descriptor Array Init===========================*/
+  
   HPL_descinit( DescA, &l_n, &l_n, &l_n, &l_n, &l_zero, &l_zero, &CONTXT, &clda, &info );
   HPL_descinit( DescB, &l_n, &l_n, &l_n, &l_n, &l_zero, &l_zero, &CONTXT, &cldb, &info );
-  HPL_descinit( DescC, &l_n, &l_n, &l_n, &l_n, &l_zero, &l_zero, &CONTXT, &cldc, &info );
+  HPL_descinit( DescC, &l_n, &l_n, &l_n, &l_n, &l_zero, &l_zero, &CONTXT, &cldb, &info );
   
 
   /*==================Broadcast Arrays Over Processess=====================*/
+  
   HPL_pdgeadd("N", &l_n, &l_n, &d_one, a, &l_one, &l_one, DescA, &d_zero, a, &l_one, &l_one, DescA);
   HPL_pdgeadd("N", &l_n, &l_n, &d_one, b, &l_one, &l_one, DescB, &d_zero, b, &l_one, &l_one, DescB);
-  
+
+
   /*
   *
   * Parallel DGEMM outline :
@@ -164,8 +167,10 @@ HPCC_PDGEMM_Scala_Calculation(int n, int doIO, double *UGflops, int *Un, int *Uf
   */
 
   /*======================================Main Calculation==========================================*/
-  HPL_pdgemm("N","N",  &l_n, &l_n, &l_n, &alpha, a, &l_one, &l_one, DescA, b, &l_one, &l_one, DescB, &beta, c, &l_one, &l_one, DescC );
+  
+  HPL_pdgemm("N","N", &l_n, &l_n, &l_n, &alpha, a, &l_one, &l_one, DescA, b, &l_one, &l_one, DescB, &beta, c, &l_one, &l_one, DescC );
  
+  printf("%s", "done with pdgemm");
   t1 = MPI_Wtime();
   t1 -= t0;
   dn = (double)n;
@@ -206,7 +211,7 @@ HPCC_PDGEMM_Scala_Calculation(int n, int doIO, double *UGflops, int *Un, int *Uf
   if (a) HPCC_free( a );
   return sres;
 }
-
+/*PDGEMM FIN*/
 
 
 double
@@ -266,12 +271,14 @@ HPCC_DGEMM_Calculation(int n, int doIO, double *UGflops, int *Un, int *Ufailure,
   xnrm = dnrm_inf( n, 1, x, n );
 
   /* y <- c*x */
+  //pdgemv_("N", &l_n, &l_n, &alpha, a, &ONE, &ONE, descA, x, &ONE, &ONE, descx, &ONE, &beta, y, &ONE, &ONE, descy, &ONE);
  
   HPL_dgemv( HplColumnMajor, HplNoTrans, n, n, 1.0, c, ldc, x, 1, 0.0, y, 1 );
 
   /* z <- b*x */
   HPL_dgemv( HplColumnMajor, HplNoTrans, n, n, 1.0, b, ldb, x, 1, 0.0, z, 1 );
-  
+  //pdgemv_("N", &l_n, &l_n, &alpha, A, &ONE, &ONE, descA, x, &ONE, &ONE, descx, &ONE, &beta, y, &ONE, &ONE, descy, &ONE);
+ 
 
   /* y <- alpha * a * z - y */
   HPL_dgemv( HplColumnMajor, HplNoTrans, n, n, alpha, a, lda, z, 1, -1.0, y, 1 );
@@ -323,7 +330,9 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
     }
   }
   if(doIO) fprintf(Rfile,"%s", "N,RunID,GFLOPS\n");
+
   /*
+  *
   * AUTHOR= OHAD KATZ
   * 
   * Added functionality such that DGEMM takes in values from the array of matrices
@@ -336,12 +345,13 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
   * 
   *  Sample Output:
   * [------------------------------------------------------------------------------------------------]
-  * [ Matrix Size |  Repetitions | Total Time  |  Avg GFLOPS  |  Min GFLOP   |   Max GFLOP   |  srec ]
-  * [    128      |     1000     |   30 sec    |     47.123   |    57.391    |    14.532     |  .03  ] 
-  * [    256      |     500      |   40 sec    |     50.432   |    61.123    |    16.431     |  .021 ]
-  * [    512      |     250      | 1 min 30 sec|     48.123   |    53.912    |    23.13      |  .23  ]
-  * [    1024     |     100      | 2 min 10 sec|     49.13    |    57.93     |    21.34      |  .14  ]
+  * [ Matrix Size |  Repetitions | Total Time  |  Avg GFLOPS  |  Min GFLOP   |   Max GFLOP   |  sres ]
+  * [    128      |     1000     |     1 sec   |     47.123   |    57.391    |    14.532     |  .03  ] 
+  * [    256      |      500     |    30 sec   |     50.432   |    61.123    |    16.431     |  .021 ]
+  * [    512      |      250     |  1:30 sec   |     48.123   |    53.912    |    23.13      |  .23  ]
+  * [    1024     |      100     |  2:10 sec   |     49.13    |    57.93     |    21.34      |  .14  ]
   * [------------------------------------------------------------------------------------------------]
+  * 
   */
 
   /*Iterate through each Matrix Size and repeat operations on it*/
@@ -364,9 +374,6 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
         sum[i_matrix] += Gflop;
         stddev[i_matrix] += Gflop*Gflop;
         
-        // if (! a || ! b || ! c || ! x || ! y || ! z) {
-        //   break;
-        // }
       }
       
       sresArr[i_matrix]= sres;
@@ -374,6 +381,7 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
       * Average = sum/N
       * Standard Deviation= Mean(Gflops^2)-Mean(Gflops)^2
       */
+
       /*Calculations for each fixed size matrix*/
       avg[i_matrix] = sum[i_matrix]/repetitions;
       avgSquare= avg[i_matrix]*avg[i_matrix];
@@ -413,14 +421,6 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
 
   if (sres < params->test.thrsh)
     failure = 0;   
-
-
-	// if (z) HPCC_free( z );
-	// if (y) HPCC_free( y );
-	// if (x) HPCC_free( x );
-	// if (c) HPCC_free( c );
-	// if (b) HPCC_free( b );
-	// if (a) HPCC_free( a );
 
 	if (doIO) {
 	  fflush( outFile );
