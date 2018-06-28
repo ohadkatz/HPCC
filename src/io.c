@@ -43,9 +43,7 @@ ReadInts(char *buf, int n, int *val) {
 
 static int
 HPCC_InitHPL(HPCC_Params *p) {
-  /* Author= Ohad Katz
-  *  Added &p->matrices and &p-> repetitions
-  */
+
   HPL_pdinfo( &p->test, &p->ns, p->nval, &p->nbs, p->nbval, &p->porder, &p->npqs, p->pval,
               p->qval, &p->npfs, p->pfaval, &p->nbms, p->nbmval, &p->ndvs, p->ndvval, &p->nrfs,
               p->rfaval, &p->ntps, p->topval, &p->ndhs, p->ndhval, &p->fswap, &p->tswap,
@@ -174,7 +172,6 @@ HPCC_InputFileInit(HPCC_Params *params) {
     line++;
     fgets( buf, nbuf, f );
     params->DGEMM_N = ReadInts( buf, HPL_MAX_PARAM, params->DGEMM_MatSize) + 1;
-    
     
     
     /*Pull # of repetitions needed for DGEMM*/
@@ -313,7 +310,7 @@ HPCC_Init(HPCC_Params *params) {
   HPCC_InitHPL( params ); /* HPL calls exit() if there is a problem */
   HPCC_InputFileInit( params );
 
-  params->RunHPL = 0;
+  params->RunHPL = 1;
   params->RunStarDGEMM = 1;
   params->RunSingleDGEMM = 0;
   params->RunPTRANS = 0;
@@ -329,12 +326,12 @@ HPCC_Init(HPCC_Params *params) {
   params->RunMPIFFT = 0;
   params->RunStarFFT = 0;
   params->RunSingleFFT = 0;
-  // params->RunHPL = params->RunStarDGEMM = params->RunSingleDGEMM =
-  // params->RunPTRANS = params->RunStarStream = params->RunSingleStream =
-  // params->RunMPIRandomAccess_LCG = params->RunStarRandomAccess_LCG = params->RunSingleRandomAccess_LCG =
-  // params->RunMPIRandomAccess = params->RunStarRandomAccess = params->RunSingleRandomAccess =
-  // params->RunMPIFFT = params->RunStarFFT = params->RunSingleFFT =
-  // params->RunLatencyBandwidth = 1;
+  params->RunHPL = params->RunStarDGEMM = params->RunSingleDGEMM =
+  params->RunPTRANS = params->RunStarStream = params->RunSingleStream =
+  params->RunMPIRandomAccess_LCG = params->RunStarRandomAccess_LCG = params->RunSingleRandomAccess_LCG =
+  params->RunMPIRandomAccess = params->RunStarRandomAccess = params->RunSingleRandomAccess =
+  params->RunMPIFFT = params->RunStarFFT = params->RunSingleFFT =
+  params->RunLatencyBandwidth = 1;
 
   params->MPIRandomAccess_LCG_GUPs =
   params->MPIRandomAccess_GUPs = params->StarGUPs = params->SingleGUPs =
@@ -466,9 +463,10 @@ HPCC_Finalize(HPCC_Params *params) {
   // fprintf( outputFile, "HPL_BnormI=%g\n", params->HPLrdata.BnormI );
   // fprintf( outputFile, "HPL_N=%d\n", params->HPLrdata.N );
   // fprintf( outputFile, "HPL_NB=%d\n", params->HPLrdata.NB );
-  // fprintf( outputFile, "HPL_nprow=%d\n", params->HPLrdata.nprow );
-  // fprintf( outputFile, "HPL_npcol=%d\n", params->HPLrdata.npcol );
-  // fprintf( outputFile, "HPL_depth=%d\n", params->HPLrdata.depth );
+   printf("HPL_Nprow=%d\n", params->HPLrdata.nprow);
+   fprintf( outputFile, "HPL_nprow=%d\n", params->HPLrdata.nprow );
+   fprintf( outputFile, "HPL_npcol=%d\n", params->HPLrdata.npcol );
+   fprintf( outputFile, "HPL_depth=%d\n", params->HPLrdata.depth );
   // fprintf( outputFile, "HPL_nbdiv=%d\n", params->HPLrdata.nbdiv );
   // fprintf( outputFile, "HPL_nbmin=%d\n", params->HPLrdata.nbmin );
   // fprintf( outputFile, "HPL_cpfact=%c\n", params->HPLrdata.cpfact );
@@ -500,6 +498,7 @@ HPCC_Finalize(HPCC_Params *params) {
   // fprintf( outputFile, "HPLMaxProcs=%d\n", params->HPLMaxProc );
   // fprintf( outputFile, "HPLMinProcs=%d\n", params->HPLMinProc );
   // fprintf( outputFile, "DGEMM_N=%d\n", params->DGEMM_N );
+  
   fprintf( outputFile, "StarDGEMM_Gflops=%g\n",   params->StarDGEMMGflops );
   fprintf( outputFile, "SingleDGEMM_Gflops=%g\n", params->SingleDGEMMGflops );
   // fprintf( outputFile, "PTRANS_GBs=%g\n", params->PTRANSrdata.GBs );
