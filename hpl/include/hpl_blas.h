@@ -164,9 +164,16 @@ pdgemm_(
     const MKL_INT *ib, const MKL_INT *jb, const MKL_INT *descb, const double *beta, 
     double *c, const MKL_INT *ic, const MKL_INT *jc, const MKL_INT *descc );
 
+void pdgemv_( const char *trans, const MKL_INT *m, const MKL_INT *n, const double *alpha, 
+              const double *a, const MKL_INT *ia, const MKL_INT *ja, const MKL_INT *desca, 
+              const double *x, const MKL_INT *ix, const MKL_INT *jx, const MKL_INT *descx, const MKL_INT *incx,
+               const double *beta, double *y, const MKL_INT *iy, const MKL_INT *jy, const MKL_INT *descy, const MKL_INT *incy );
+
 void    blacs_get_(const MKL_INT *ConTxt, const MKL_INT *what, MKL_INT *val);
 
 void    blacs_gridinit_(MKL_INT *ConTxt, const char *layout, const MKL_INT *nprow, const MKL_INT *npcol);
+
+void    blacs_gridinfo_(const MKL_INT *ConTxt, MKL_INT *nprow, MKL_INT *npcol, MKL_INT *myrow, MKL_INT *mycol);
 
 void descinit_(MKL_INT* desc, const MKL_INT* m, const MKL_INT* n,
                const MKL_INT* mb, const MKL_INT* nb, const MKL_INT* irsrc,
@@ -174,16 +181,26 @@ void descinit_(MKL_INT* desc, const MKL_INT* m, const MKL_INT* n,
                MKL_INT* info);
 
 
-void    blacs_gridexit_(const MKL_INT *ConTxt);
+void  blacs_gridexit_(const MKL_INT *ConTxt);
 
 
 void pdgeadd_( const char *trans, const MKL_INT *m, const MKL_INT *n, 
                const double *alpha, const double *a, const MKL_INT *ia, const MKL_INT *ja, 
                const MKL_INT *desca, const double *beta, double *c, const MKL_INT *ic, 
                const MKL_INT *jc, const MKL_INT *descc );
-               
+
 void	blacs_pinfo_(MKL_INT *mypnum, MKL_INT *nprocs);
 
+
+void    igebs2d_(const MKL_INT *ConTxt, const char *scope, const char *top, const MKL_INT *m, const MKL_INT *n, const MKL_INT *A, const MKL_INT *lda);
+
+void    dgebs2d_(const MKL_INT *ConTxt, const char *scope, const char *top, const MKL_INT *m, const MKL_INT *n, const double *A, const MKL_INT *lda);
+
+void    igebr2d_(const MKL_INT *ConTxt, const char *scope, const char *top, const MKL_INT *m, const MKL_INT *n, MKL_INT *A, const MKL_INT *lda, const MKL_INT *rsrc, const MKL_INT *csrc);
+
+void    dgebr2d_(const MKL_INT *ConTxt, const char *scope, const char *top, const MKL_INT *m, const MKL_INT *n, double *A, const MKL_INT *lda, const MKL_INT *rsrc, const MKL_INT *csrc);
+
+void    blacs_exit_(const MKL_INT *notDone);
 /*
  * ---------------------------------------------------------------------
  * HPL C BLAS macro definition
@@ -206,10 +223,19 @@ void	blacs_pinfo_(MKL_INT *mypnum, MKL_INT *nprocs);
 #define    HPL_pdgemm           pdgemm_
 #define    HPL_blacsget         blacs_get_
 #define    HPL_blacsgridinit    blacs_gridinit_
+#define    HPL_blacsgridinfo    blacs_gridinfo_
+
 #define    HPL_descinit         descinit_
 #define    HPL_gridexit         blacs_gridexit_
+#define    HPL_blacs_exit       blacs_exit_
 #define    HPL_pdgeadd          pdgeadd_
 #define    HPL_blacspinfo       blacs_pinfo_
+
+#define    HPL_igebs2d          igebs2d_
+#define    HPL_dgebs2d          dgebs2d_
+#define    HPL_igebr2d          igebr2d_
+#define    HPL_dgebr2d          dgebr2d_
+
 #endif
 
 #ifdef HPL_CALL_FBLAS
