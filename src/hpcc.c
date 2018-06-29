@@ -5,7 +5,7 @@
 
 #include <hpcc.h>
 #include <ctype.h>
-
+int main123(  );
 int
 main(int argc, char *argv[]) {
   int myRank, commSize;
@@ -143,19 +143,19 @@ main(int argc, char *argv[]) {
   /*                       PTRANS                       */
   /* -------------------------------------------------- */
 
-  MPI_Barrier( MPI_COMM_WORLD );
-
-  BEGIN_IO( myRank, outFname, outputFile);
-  fprintf( outputFile, "Begin of PTRANS section.\n" );
-  END_IO( myRank, outputFile );
-
-  if (params.RunPTRANS) PTRANS( &params );
-
-  time( &currentTime );
-  BEGIN_IO( myRank, outFname, outputFile);
-  fprintf( outputFile,"Current time (%ld) is %s\n",(long)currentTime,ctime(&currentTime));
-  fprintf( outputFile, "End of PTRANS section.\n" );
-  END_IO( myRank, outputFile );
+//  MPI_Barrier( MPI_COMM_WORLD );
+//
+//  BEGIN_IO( myRank, outFname, outputFile);
+//  fprintf( outputFile, "Begin of PTRANS section.\n" );
+//  END_IO( myRank, outputFile );
+//
+//  if (params.RunPTRANS) PTRANS( &params );
+//
+//  time( &currentTime );
+//  BEGIN_IO( myRank, outFname, outputFile);
+//  fprintf( outputFile,"Current time (%ld) is %s\n",(long)currentTime,ctime(&currentTime));
+//  fprintf( outputFile, "End of PTRANS section.\n" );
+//  END_IO( myRank, outputFile );
 
   /* -------------------------------------------------- */
   /*                    StarDGEMM                       */
