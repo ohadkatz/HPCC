@@ -10,8 +10,10 @@
 #include <mkl_service.h>
 #include <hpl_grid.h>
 
-/* Generates random matrix with entries between 0.0 and 1.0 */
 
+/* Definition of MIN and MAX functions */
+#define MAX(a,b)((a)<(b)?(b):(a))
+#define MIN(a,b)((a)>(b)?(b):(a))
 
 /*
  *Baseline DGEMM(No optimization)
@@ -79,15 +81,6 @@ dnrm_inf(int m, int n, double *a, int lda) {
 
   return mx;
 }
-#ifndef M_PI
-#define M_PI 3.14159265358979323846264338327
-#endif
-
-/* Definition of MIN and MAX functions */
-#define MAX(a,b)((a)<(b)?(b):(a))
-#define MIN(a,b)((a)>(b)?(b):(a))
-
-
 /*
 *======================================
 * HPCC Parallel DGEMM
@@ -148,15 +141,10 @@ HPCC_scaLAPACK_Calc(int n, int nb, int nprow, int npcol, int doIO, double *UGflo
       /*Any process other than 0 must receive the broadcasted data*/
       HPL_igebr2d( &CONTXT, "All", " ", &l_four, &l_one, iwork, &l_four, &l_zero, &l_zero );
       HPL_dgebr2d( &CONTXT, "All", " ", &l_one, &l_one, &thresh, &l_one, &l_zero, &l_zero );
-      printf("Process #%d Received!\n",iam);
       n = iwork[0];
-      printf("GRABBED n: %d\n", n);
       nb = iwork[1];
-      printf("GRABBED nb: %d\n", nb);
       nprow = iwork[2];
-      printf("GRABBED nprow: %d\n", nprow);
       npcol = iwork[3];
-      printf("GRABBED npcol: %d\n", npcol);
   }
 
   HPL_gridexit( &CONTXT);
@@ -174,27 +162,12 @@ HPCC_scaLAPACK_Calc(int n, int nb, int nprow, int npcol, int doIO, double *UGflo
         a_local  = (double*) mkl_calloc(n*n, sizeof( double ), 64);
         b_local  = (double*) mkl_calloc(n*n, sizeof( double ), 64);
         /* Set arrays */
-        for ( i=0; i<n; i++ ){
-            for ( j=0; j<n; j++ ){
-                b_local [ i+n*j ] = 1.0*rand()/RAND_MAX;
-            }
-            b_local [ i+n*i ] += 2.0;
-        }
-        for ( j=0; j<n; j++ ){
-            for ( i=0; i<n; i++ ){
-                if ( j < n-1 ){
-                    if ( i <= j ){
-                        a_local [ i+n*j ] = 1.0 / sqrt( ( double )( (j+1)*(j+2) ) );
-                    } else if ( i == j+1 ) {
-                        a_local [ i+n*j ] = -1.0 / sqrt( 1.0 + 1.0/( double )(j+1) );
-                    } else {
-                        a_local [ i+n*j ] = d_zero;
-                    }
-                } else {
-                    a_local [ i+n*(n-1) ] = 1.0 / sqrt( ( double )n );
-                }
-            }
-        }     
+        seed_a = (int)time( NULL );
+        dmatgen( n, n, a_local, n, seed_a );
+
+        seed_b = (int)time( NULL );
+        dmatgen( n, n, b_local, n, seed_b );
+         
   }
   else{
     a_local=NULL;
@@ -250,6 +223,10 @@ HPCC_scaLAPACK_Calc(int n, int nb, int nprow, int npcol, int doIO, double *UGflo
   /*==================Broadcast Arrays Over Processess=====================*/
   HPL_pdgeadd(&trans, &l_n, &l_n, &d_one, a_local, &l_one, &l_one, DescA_Local, &d_zero, a, &l_one, &l_one, DescA);
   HPL_pdgeadd(&trans, &l_n, &l_n, &d_one, b_local, &l_one, &l_one, DescB_Local, &d_zero, b, &l_one, &l_one, DescB);
+
+  alpha = a[n / 2];
+  beta  = b[n / 2];
+
   if( iam == 0 ){ printf( ".. Arrays are distributed ( p?geadd ) ..\n" ); }
   
   if( ( myrow == 0 ) && ( mycol == 0 ) ){
@@ -281,20 +258,20 @@ HPCC_scaLAPACK_Calc(int n, int nb, int nprow, int npcol, int doIO, double *UGflo
   xnrm = dnrm_inf( n, 1, x, n );
 
 
-  /* y <- Ax+ y */
-  pdgemv_("N", &n, &n, &d_one, a, &i_one, &i_one, DescA, x, &i_one, &i_one, DescX, &i_one, &beta, y, &i_one, &i_one, DescY, &i_one);
-  
-  /* z <- b*x */
-  // HPL_dgemv( HplColumnMajor, HplNoTrans, n, n, 1.0, b, ldb, x, 1, 0.0, z, 1 );
-  pdgemv_("N", &n, &n, &d_one, b, &i_one, &i_one, DescB, x, &i_one, &i_one, DescX, &i_one, &beta, z, &i_one, &i_one, DescZ, &i_one);
-  
+   /* y <- c*x */
+  pdgemv_("N", &n, &n , &d_one , c , &i_one, &i_one, DescC, x, &i_one, &i_one, DescX, &i_one, &d_zero, y , &i_one, &i_one,  DescY, &i_one);
 
-  /* y <- alpha * a * z - y */
-  // HPL_dgemv( HplColumnMajor, HplNoTrans, n, n, alpha, a, lda, z, 1, -1.0, y, 1 );
-  pdgemv_("N", &n, &n, &d_one, a, &i_one, &i_one, DescA, x, &i_one, &i_one, DescX, &i_one, &beta, z, &i_one, &i_one, DescZ, &i_one);
+  // /* z <- b*x */
+  pdgemv_("N", &n, &n, &d_one, b, &i_one, &i_one, DescB, x, &i_one, &i_one, DescX, &i_one, &d_zero, z, &i_one, &i_one, DescZ, &i_one);
   
-  /* y <- beta * c_orig * x + y */
-  // HPL_dgemv( HplColumnMajor, HplNoTrans, n, n, beta, c, ldc, x, 1, 1.0, y, 1 );
+  // /* y <- alpha * a * z - y */
+  pdgemv_("N", &n, &n, &alpha, a, &i_one, &i_one, DescA, z, &i_one, &i_one, DescZ, &i_one, &d_negone, y, &i_one, &i_one, DescY, &i_one);
+  
+  dmatgen( n, n, c, n, seed_c );
+
+  // /* y <- beta * c_orig * x + y */
+  pdgemv_("N", &n, &n, &beta, c, &i_one, &i_one, DescC, x, &i_one, &i_one, DescX, &i_one, &d_one, y, &i_one, &i_one, DescY, &i_one);
+  
 
   sres = dnrm_inf( n, 1, y, n ) / cnrm / xnrm / n / HPL_dlamch( HPL_MACH_EPS );
   printf("%f\n", sres);
@@ -348,9 +325,7 @@ HPCC_DGEMM_Calculation(int n, int doIO, double *UGflops, int *Un, int *Ufailure,
   beta  = b[n / 2];
 
   t0 = MPI_Wtime();
-  
   // FOR EDUCATIONAL PURPOSES: Unoptimized Matrix-Matrix Multiplication= ODGEMM_Calc(a,b,c,n);
- 
   HPL_dgemm( HplColumnMajor, HplNoTrans, HplNoTrans, n, n, n, alpha, a, n, b, n, beta, c, n );
  
   t1 = MPI_Wtime();
@@ -359,7 +334,6 @@ HPCC_DGEMM_Calculation(int n, int doIO, double *UGflops, int *Un, int *Ufailure,
   if (t1 != 0.0 && t1 != -0.0){
     Gflops = 2.0e-9 * dn * dn * dn / t1;
     // EDUCATIONAL : oGflops= 2.0e-9 * oN *oN *oN/t1;
-   
   }
   else
     Gflops = 0.0;
