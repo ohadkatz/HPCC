@@ -3,6 +3,7 @@
 #include <hpcc.h>
 
 #include "cblacslt.h"
+#include <assert.h>
 
 /* Common Block Declarations */
 
@@ -893,9 +894,11 @@ L10:
 		    Cdgesd2d(context_1.ictxt,nl,ml,&work[1],nl,i__3,mcol);
 		    Cdgerv2d(context_1.ictxt,nl,ml,&c__[(kjc + 1) * c_dim1 + 1],*ldc,i__4,ncol);
 #else
-		    Cblacs_dSendrecv( context_1.ictxt,
+		    printf("Cblacs_dSendrecv is broken fix me!\n");
+		    assert(0);
+		    /*Cblacs_dSendrecv( context_1.ictxt,
                           nl, ml, &work[1], nl, i__3, mcol,
-                          nl, ml, &c__[(kjc + 1) * c_dim1 + 1], *ldc, i__4, ncol );
+                          nl, ml, &c__[(kjc + 1) * c_dim1 + 1], *ldc, i__4, ncol );*/
 #endif
 
 		} else {
@@ -905,9 +908,9 @@ L10:
 		    Cdgesd2d(context_1.ictxt,nl,ml,&work[1],nl,i__3,mcol);
 		    Cdgerv2d(context_1.ictxt,nl,ml,&work[ipt],nl, i__4,ncol);
 #else
-        Cblacs_dSendrecv( context_1.ictxt,
+        /*Cblacs_dSendrecv( context_1.ictxt,
                           nl, ml, &work[1],   nl, i__3, mcol,
-                          nl, ml, &work[ipt], nl, i__4, ncol );
+                          nl, ml, &work[ipt], nl, i__4, ncol );*/
 #endif
 
 		    kjc = iwork[(kprow - igcd * j1) % nprow * 3 + 3] * *mb;

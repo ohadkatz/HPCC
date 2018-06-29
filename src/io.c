@@ -310,7 +310,7 @@ HPCC_Init(HPCC_Params *params) {
   HPCC_InitHPL( params ); /* HPL calls exit() if there is a problem */
   HPCC_InputFileInit( params );
 
-  params->RunHPL = 1;
+  params->RunHPL = 0;
   params->RunStarDGEMM = 1;
   params->RunSingleDGEMM = 0;
   params->RunPTRANS = 0;
@@ -326,12 +326,12 @@ HPCC_Init(HPCC_Params *params) {
   params->RunMPIFFT = 0;
   params->RunStarFFT = 0;
   params->RunSingleFFT = 0;
-  params->RunHPL = params->RunStarDGEMM = params->RunSingleDGEMM =
-  params->RunPTRANS = params->RunStarStream = params->RunSingleStream =
-  params->RunMPIRandomAccess_LCG = params->RunStarRandomAccess_LCG = params->RunSingleRandomAccess_LCG =
-  params->RunMPIRandomAccess = params->RunStarRandomAccess = params->RunSingleRandomAccess =
-  params->RunMPIFFT = params->RunStarFFT = params->RunSingleFFT =
-  params->RunLatencyBandwidth = 1;
+  // params->RunHPL = params->RunStarDGEMM = params->RunSingleDGEMM =
+  // params->RunPTRANS = params->RunStarStream = params->RunSingleStream =
+  // params->RunMPIRandomAccess_LCG = params->RunStarRandomAccess_LCG = params->RunSingleRandomAccess_LCG =
+  // params->RunMPIRandomAccess = params->RunStarRandomAccess = params->RunSingleRandomAccess =
+  // params->RunMPIFFT = params->RunStarFFT = params->RunSingleFFT =
+  // params->RunLatencyBandwidth = 1;
 
   params->MPIRandomAccess_LCG_GUPs =
   params->MPIRandomAccess_GUPs = params->StarGUPs = params->SingleGUPs =

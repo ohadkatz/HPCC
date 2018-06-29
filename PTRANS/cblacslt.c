@@ -13,6 +13,8 @@ Written by Piotr Luszczek.
 
 #include <mpi.h>
 
+#ifdef CBLACSLT
+
 #include "cblacslt.h"
 
 #define DPRN(i,v) do{printf(__FILE__ "(%d)@%d:" #v "=%g\n",__LINE__,i,(double)(v));fflush(stdout);}while(0)
@@ -26,11 +28,14 @@ Written by Piotr Luszczek.
 
 static int CblacsInitialized = 0, CblacsFinalized;
 
+#endif
+
 double
 dcputime00(void) {return HPL_ptimer_cputime();}
 double
 dwalltime00(void) {return MPI_Wtime();}
 
+#ifdef CBLACSLT
 static void
 CblacsWarnImp(char *file, int line) {
   int rank;
@@ -557,6 +562,7 @@ Cdgamn2d(int ConTxt, char *scope, char *top, int m, int n, double *A, int lda, i
   MPI_Op_free( &op );
 }
 
+
 void
 Cblacs_dSendrecv(int ctxt, int mSrc, int nSrc, double *Asrc, int ldaSrc, int rdest, int cdest,
   int mDest, int nDest, double *Adest, int ldaDest, int rsrc, int csrc) {
@@ -759,3 +765,4 @@ Cigebr2d(int ConTxt, char *scope, char *top, int m, int n, int *A, int lda, int 
   CBLACS_INIT;
   CblacsBcast( ConTxt, scope, m, n, A, lda, rsrc, csrc, MPI_INT );
 }
+#endif
