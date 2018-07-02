@@ -312,7 +312,7 @@ HPCC_Init(HPCC_Params *params) {
 
   params->RunHPL = 0;
   params->RunStarDGEMM = 1;
-  params->RunSingleDGEMM = 0;
+  params->RunSingleDGEMM = 1;
   params->RunPTRANS = 0;
   params->RunStarStream = 0;
   params->RunSingleStream = 0;
@@ -325,7 +325,7 @@ HPCC_Init(HPCC_Params *params) {
   params->RunLatencyBandwidth = 0;
   params->RunMPIFFT = 0;
   params->RunStarFFT = 0;
-  params->RunSingleFFT = 0;
+  // params->RunSingleFFT = 0;
   // params->RunHPL = params->RunStarDGEMM = params->RunSingleDGEMM =
   // params->RunPTRANS = params->RunStarStream = params->RunSingleStream =
   // params->RunMPIRandomAccess_LCG = params->RunStarRandomAccess_LCG = params->RunSingleRandomAccess_LCG =
@@ -463,10 +463,10 @@ HPCC_Finalize(HPCC_Params *params) {
   // fprintf( outputFile, "HPL_BnormI=%g\n", params->HPLrdata.BnormI );
   // fprintf( outputFile, "HPL_N=%d\n", params->HPLrdata.N );
   // fprintf( outputFile, "HPL_NB=%d\n", params->HPLrdata.NB );
-   printf("HPL_Nprow=%d\n", params->HPLrdata.nprow);
-   fprintf( outputFile, "HPL_nprow=%d\n", params->HPLrdata.nprow );
-   fprintf( outputFile, "HPL_npcol=%d\n", params->HPLrdata.npcol );
-   fprintf( outputFile, "HPL_depth=%d\n", params->HPLrdata.depth );
+  //  printf("HPL_Nprow=%d\n", params->HPLrdata.nprow);
+  //  fprintf( outputFile, "HPL_nprow=%d\n", params->HPLrdata.nprow );
+  //  fprintf( outputFile, "HPL_npcol=%d\n", params->HPLrdata.npcol );
+  //  fprintf( outputFile, "HPL_depth=%d\n", params->HPLrdata.depth );
   // fprintf( outputFile, "HPL_nbdiv=%d\n", params->HPLrdata.nbdiv );
   // fprintf( outputFile, "HPL_nbmin=%d\n", params->HPLrdata.nbmin );
   // fprintf( outputFile, "HPL_cpfact=%c\n", params->HPLrdata.cpfact );

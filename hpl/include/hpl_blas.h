@@ -51,7 +51,7 @@
  * ---------------------------------------------------------------------
  */
 #include "hpl_misc.h"
-//#include "mkl_pblas.h"
+
 /*
  * ---------------------------------------------------------------------
  * typedef definitions
@@ -201,6 +201,7 @@ void    igebr2d_(const MKL_INT *ConTxt, const char *scope, const char *top, cons
 void    dgebr2d_(const MKL_INT *ConTxt, const char *scope, const char *top, const MKL_INT *m, const MKL_INT *n, double *A, const MKL_INT *lda, const MKL_INT *rsrc, const MKL_INT *csrc);
 
 void    blacs_exit_(const MKL_INT *notDone);
+
 /*
  * ---------------------------------------------------------------------
  * HPL C BLAS macro definition

@@ -5,7 +5,7 @@
 
 #include <hpcc.h>
 #include <ctype.h>
-int main123(  );
+
 int
 main(int argc, char *argv[]) {
   int myRank, commSize;
@@ -232,25 +232,25 @@ main(int argc, char *argv[]) {
   fprintf( outputFile, "End of SingleSTREAM section.\n" );
   END_IO( myRank, outputFile );
 
-  /* -------------------------------------------------- */
-  /*                       MPIFFT                       */
-  /* -------------------------------------------------- */
+  // /* -------------------------------------------------- */
+  // /*                       MPIFFT                       */
+  // /* -------------------------------------------------- */
 
-  MPI_Barrier( MPI_COMM_WORLD );
+  // MPI_Barrier( MPI_COMM_WORLD );
 
-  BEGIN_IO( myRank, outFname, outputFile);
-  fprintf( outputFile, "Begin of MPIFFT section.\n" );
-  END_IO( myRank, outputFile );
+  // BEGIN_IO( myRank, outFname, outputFile);
+  // fprintf( outputFile, "Begin of MPIFFT section.\n" );
+  // END_IO( myRank, outputFile );
 
-  if (params.RunMPIFFT) HPCC_MPIFFT( &params );
+  // if (params.RunMPIFFT) HPCC_MPIFFT( &params );
 
-  time( &currentTime );
-  BEGIN_IO( myRank, outFname, outputFile);
-  fprintf( outputFile,"Current time (%ld) is %s\n",(long)currentTime,ctime(&currentTime));
-  fprintf( outputFile, "End of MPIFFT section.\n" );
-  END_IO( myRank, outputFile );
+  // time( &currentTime );
+  // BEGIN_IO( myRank, outFname, outputFile);
+  // fprintf( outputFile,"Current time (%ld) is %s\n",(long)currentTime,ctime(&currentTime));
+  // fprintf( outputFile, "End of MPIFFT section.\n" );
+  // END_IO( myRank, outputFile );
 
-  /* -------------------------------------------------- */
+  // /* -------------------------------------------------- */
   /*                      StarFFT                       */
   /* -------------------------------------------------- */
 
@@ -268,9 +268,9 @@ main(int argc, char *argv[]) {
   // fprintf( outputFile, "End of StarFFT section.\n" );
   // END_IO( myRank, outputFile );
 
-  // /* -------------------------------------------------- */
-  // /*                      SingleFFT                     */
-  // /* -------------------------------------------------- */
+  /* -------------------------------------------------- */
+  /*                      SingleFFT                     */
+  /* -------------------------------------------------- */
 
   // MPI_Barrier( MPI_COMM_WORLD );
 
