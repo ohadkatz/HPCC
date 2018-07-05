@@ -119,7 +119,8 @@ typedef struct {
   int STREAM_repetitions[HPL_MAX_PARAM];
 
   /*Added Results output*/
-  char results[256 + 1];
+  char SingleResults[256 + 1];
+  char StarResults[256 + 1];
 } HPCC_Params;
 /*
 This is what needs to be done to add a new benchmark:
@@ -174,7 +175,7 @@ extern int HPCC_SingleFFT(HPCC_Params *params);
 extern int HPCC_MPIFFT(HPCC_Params *params);
 
 extern int HPCC_TestFFT(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufailure);
-extern int HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufailure);
+extern int HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufailure, int ResultChange);
 
 extern int MaxMem(int nprocs, int imrow, int imcol, int nmat, int *mval, int *nval, int nbmat,
   int *mbval, int *nbval, int ngrids, int *npval, int *nqval, long *maxMem);

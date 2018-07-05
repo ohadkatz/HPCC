@@ -256,9 +256,10 @@ HPCC_Init(HPCC_Params *params) {
   int myRank, commSize;
   int i, nMax, nbMax, procCur, procMax, procMin, errCode;
   double totalMem;
-  char inFname[12] = "hpccinf.txt", outFname[13] = "hpccoutf.txt", results[14] = "results.txt";
+  char inFname[12] = "hpccinf.txt", outFname[13] = "hpccoutf.txt", SingleResults[18] = "SingleResults.txt", StarResults[16] = "StarResults.txt";
   FILE *outputFile;
-  FILE *Rfile;
+  FILE *SingleRFile;
+  FILE *StarRFile;
   MPI_Comm comm = MPI_COMM_WORLD;
   time_t currentTime;
   char hostname[MPI_MAX_PROCESSOR_NAME + 1]; int hostnameLen;
@@ -269,17 +270,21 @@ HPCC_Init(HPCC_Params *params) {
 
   outputFile = NULL;
   /*Added*/
-  Rfile= NULL;
+  SingleRFile= NULL;
+  StarRFile= NULL;
   MPI_Comm_size( comm, &commSize );
   MPI_Comm_rank( comm, &myRank );
   strcpy( params->inFname, inFname );
   strcpy( params->outFname, outFname );
   /*ADDED*/
-  strcpy( params->results, results );
+  strcpy( params->SingleResults, SingleResults );
+  strcpy( params->StarResults, StarResults);
   if (0 == myRank)
     outputFile = fopen( params->outFname, "a" );
     /*ADDED R results*/
-    Rfile = fopen(params->results, "w");
+    SingleRFile = fopen(params->SingleResults, "w");
+    StarRFile = fopen(params->StarResults, "w");
+
   errCode = 0;
   if (sizeof(u64Int) < 8 || sizeof(s64Int) < 8) errCode = 1;
   if (ErrorReduce( outputFile, "No 64-bit integer type available.", errCode, comm ))

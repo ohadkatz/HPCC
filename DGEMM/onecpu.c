@@ -16,7 +16,7 @@ HPCC_StarDGEMM(HPCC_Params *params) {
   MPI_Comm_size( comm, &commSize );
   MPI_Comm_rank( comm, &myRank );
 
-  rv = HPCC_TestDGEMM( params, 0 == myRank, &localGflops, &n, &failure );
+  rv = HPCC_TestDGEMM( params, 0 == myRank, &localGflops, &n, &failure, 0 );
   //params->DGEMM_N = n;
 
   MPI_Reduce( &rv, &errCount, 1, MPI_INT, MPI_SUM, 0, comm );
@@ -69,7 +69,7 @@ HPCC_SingleDGEMM(HPCC_Params *params) {
   MPI_Bcast( &rank, 1, MPI_INT, 0, comm ); /* broadcast the rank selected on node 0 */
 
   if (myRank == rank) /* if this node has been selected */
-    rv = HPCC_TestDGEMM( params, 0 == myRank ? 1 : 0, &localGflops, &n, &failure );
+    rv = HPCC_TestDGEMM( params, 0 == myRank ? 1 : 0, &localGflops, &n, &failure, 1);
 
   MPI_Bcast( &rv, 1, MPI_INT, rank, comm ); /* broadcast error code */
   MPI_Bcast( &failure, 1, MPI_INT, rank, comm ); /* broadcast failure indication */
