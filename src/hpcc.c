@@ -11,9 +11,11 @@ main(int argc, char *argv[]) {
   int myRank, commSize;
   char *outFname;
   /*Added*/
-  char *results;
+  char *SingleResults;
+  char *StarResults;
   FILE *outputFile;
-  FILE *Rfile;
+  FILE *SingleRFile;
+  FILE *StarRFile;
   HPCC_Params params;
   time_t currentTime;
   void *extdata;
@@ -30,7 +32,8 @@ main(int argc, char *argv[]) {
   MPI_Comm_rank( MPI_COMM_WORLD, &myRank );
 
   outFname = params.outFname;
-  results = params.results;
+  SingleResults = params.SingleResults;
+  StarResults = params.StarResults;
   /* -------------------------------------------------- */
   /*                 MPI RandomAccess                   */
   /* -------------------------------------------------- */
@@ -232,25 +235,25 @@ main(int argc, char *argv[]) {
   fprintf( outputFile, "End of SingleSTREAM section.\n" );
   END_IO( myRank, outputFile );
 
-  // /* -------------------------------------------------- */
-  // /*                       MPIFFT                       */
-  // /* -------------------------------------------------- */
+  /* -------------------------------------------------- */
+  /*                       MPIFFT                       */
+  /* -------------------------------------------------- */
 
-  // MPI_Barrier( MPI_COMM_WORLD );
+  MPI_Barrier( MPI_COMM_WORLD );
 
-  // BEGIN_IO( myRank, outFname, outputFile);
-  // fprintf( outputFile, "Begin of MPIFFT section.\n" );
-  // END_IO( myRank, outputFile );
+  BEGIN_IO( myRank, outFname, outputFile);
+  fprintf( outputFile, "Begin of MPIFFT section.\n" );
+  END_IO( myRank, outputFile );
 
-  // if (params.RunMPIFFT) HPCC_MPIFFT( &params );
+  if (params.RunMPIFFT) HPCC_MPIFFT( &params );
 
-  // time( &currentTime );
-  // BEGIN_IO( myRank, outFname, outputFile);
-  // fprintf( outputFile,"Current time (%ld) is %s\n",(long)currentTime,ctime(&currentTime));
-  // fprintf( outputFile, "End of MPIFFT section.\n" );
-  // END_IO( myRank, outputFile );
+  time( &currentTime );
+  BEGIN_IO( myRank, outFname, outputFile);
+  fprintf( outputFile,"Current time (%ld) is %s\n",(long)currentTime,ctime(&currentTime));
+  fprintf( outputFile, "End of MPIFFT section.\n" );
+  END_IO( myRank, outputFile );
 
-  // /* -------------------------------------------------- */
+  /* -------------------------------------------------- */
   /*                      StarFFT                       */
   /* -------------------------------------------------- */
 

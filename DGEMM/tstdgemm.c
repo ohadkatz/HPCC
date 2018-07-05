@@ -176,6 +176,7 @@ HPCC_scaLAPACK_Calc(int n, int nb, int nprow, int npcol, int doIO, double *UGflo
   
   lld_local = Mmax( numroc_( &n, &n, &myrow, &i_zero, &i_one), 1 );
   lld = Mmax( mp, 1 );
+  
   /*
   * Parallel DGEMM outline :
   * Trans a, Trans B, m , n , k , alpha, a , IA(First Row 1<=IA<=M_A), JA(First Column 1<=JA<=N_A), b, IB, JB, Desc_b, beta, c , IC, JC, Desc_c
@@ -347,7 +348,7 @@ HPCC_DGEMM_Calculation(int n, int doIO, double *UGflops, int *Un, int *Ufailure,
 }
 
 int
-HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufailure) {
+HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufailure, int ResultFile) {
   int i,j, n, failure = 1;
   double sres, cnrm, xnrm,max,min;
   double Gflop = 0.0,  start,end;
@@ -363,8 +364,13 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
   if (doIO) {
     outFile = fopen(params->outFname, "a" );
     /*Added*/
-    Rfile = fopen(params-> results, "a");
-    
+    if (ResultFile==0){
+      Rfile = fopen(params->StarResults, "a");
+    }
+    else{
+      Rfile = fopen(params->SingleResults, "a");
+    }
+
     if (! outFile ) {
       outFile = stderr;
       fprintf(outFile, "Cannot open output file.\n" );
