@@ -6,10 +6,11 @@
 #include <sys/time.h>
 #include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <mkl_service.h>
 #include <hpl_grid.h>
-
+#include <hpl_pauxil.h>
 /* Definition of MIN and MAX functions */
 #define MAX(a,b)((a)<(b)?(b):(a))
 #define MIN(a,b)((a)>(b)?(b):(a))
@@ -93,30 +94,29 @@ dnrm_inf(int m, int n, double *a, int lda) {
 */
 double
 HPCC_scaLAPACK_Calc(int n, int nb, int nprow, int npcol, int doIO, double *UGflops, int *Un, int *Ufailure, double *GFLOPVAL){
-  double *a=NULL, *a_local, *b=NULL, *b_local, *c=NULL, *x=NULL, *y=NULL, *z=NULL,  alpha, beta, sres;
+  double *a=NULL, *a_local, *b=NULL, *b_local, *c=NULL, *c_local, *x=NULL, *x_local, *y=NULL, *z=NULL,  alpha, beta, sres;
   double Gflops = 0.0, dn, t0, t1, thresh= 16.0;
   int seed_a, seed_b, seed_c, seed_x, mp, nq;
+  int one=1,zero=0;
   /*============ PDGEMM Variable declaration ============*/
   MKL_INT  i,j,lda, ldb, ldc, failure = 1,i_negone=-1, i_zero = 0, i_one = 1 , i_two = 2, i_four=4;
   double diffnorm, anorm, bnorm, eps, *work=NULL;
   MKL_INT l_n, l_nb, lld_local,lld;
   MKL_INT CONTXT, info, nprocs, iam, myrow, mycol;
-  MKL_INT DescA[9], DescA_Local[9], DescB[9], DescB_Local[9], DescC[9],DescX[9], DescX_Local[9],  /*Descriptor Arrays*/
-          DescY[9], DescY_Local[9], DescZ[9], DescZ_Local[9], iwork[4];
+  MKL_INT DescA[9], DescA_Local[9], DescB[9], DescB_Local[9], DescC[9], DescC_Local[9], /*Descriptor Arrays*/
+          DescX[9], DescX_Local[9], DescY[9], DescY_Local[9], DescZ[9], DescZ_Local[9], 
+          iwork[4];
    /*l = long */
   const double d_one=1, d_zero=0, d_negone=-1, d_four=4;  /*d = double */
 
   const char trans= 'N'; /*Complying with Fortran standards*/
 
-  if (n < 0) n = -n; /* if 'n' has overflown an integer */
-
+  if (n < 0) n = -n; /* if 'n' has overflown an integer */ 
   l_n = n;
   l_nb= nb;
   lda = ldb = ldc = n;
-  const MKL_INT clda= lda, cldb= ldb, cldc= ldc;
   a_local=a;
   b_local=b;
-
   /*=====================Parallel Initialization============================*/
   blacs_pinfo_( &iam, &nprocs ); /*Grab # of processes*/
   blacs_get_(&i_negone, &i_zero, &CONTXT); /*Initialize a temporary process for broadcasting*/
@@ -128,21 +128,23 @@ HPCC_scaLAPACK_Calc(int n, int nb, int nprow, int npcol, int doIO, double *UGflo
     iwork[1] = nb;
     iwork[2] = nprow;
     iwork[3] = npcol;
-    HPL_igebs2d(&CONTXT, "All", " ", &i_four, &i_one, iwork, &i_four );
-    HPL_dgebs2d(&CONTXT, "All", " ", &i_one, &i_one, &thresh, &i_one );
+    HPL_igebs2d(&CONTXT, "All", " ",&i_four, &i_one, iwork, &i_four );
+    HPL_dgebs2d(&CONTXT, "All", " ",&i_one, &i_one, &thresh, &i_one );
+
 
   }  
   else { 
     /*Any process other than 0 must receive the broadcasted data*/
-    HPL_igebr2d(&CONTXT, "All", " ", &i_four, &i_one, iwork, &i_four, &i_zero, &i_zero);
-    HPL_dgebr2d(&CONTXT, "All", " ", &i_one, &i_one, &thresh, &i_one, &i_zero, &i_zero);    
+    HPL_igebr2d(&CONTXT, "All", " ", &i_four, &i_one, iwork, &i_four, &i_zero, &i_zero );
+    HPL_dgebr2d(&CONTXT, "All", " ", &i_one, &i_one, &thresh, &i_one, &i_zero, &i_zero); 
+     
     n = iwork[0];
     nb = iwork[1];
     nprow = iwork[2];
     npcol = iwork[3];
-    
   }
   HPL_gridexit( &CONTXT);
+
   // /*======================Start 2D Processes==========================*/
   HPL_blacsget(&i_negone, &i_zero, &CONTXT);
   
@@ -153,17 +155,30 @@ HPCC_scaLAPACK_Calc(int n, int nb, int nprow, int npcol, int doIO, double *UGflo
     /* Allocate arrays */
     a_local  = (double*) mkl_calloc(n*n, sizeof(double), 64);
     b_local  = (double*) mkl_calloc(n*n, sizeof(double), 64);
+    c_local  = (double*) mkl_calloc(n*n, sizeof(double), 64);
+    x_local  = (double*) mkl_calloc(n,   sizeof(double), 64);
+    
     /* Set arrays */
     seed_a = (int)time( NULL );
-    dmatgen( n, n, a_local, n, seed_a );
+    dmatgen(n, n, a_local, n, seed_a);
 
     seed_b = (int)time( NULL );
-    dmatgen( n, n, b_local, n, seed_b );
+    dmatgen(n, n, b_local, n, seed_b);
+    
+    seed_c = (int)time( NULL );
+    dmatgen(n, n, c_local, n, seed_c);
+    
+    seed_x = (int)time( NULL );
+    dmatgen(n, 1, x_local, n, seed_x);
+    
   }
+
   else{
     a_local=NULL;
     b_local=NULL;
+    x_local=NULL;
   }
+  
   mp = numroc_( &n, &nb, &myrow, &i_zero, &nprow );
   nq = numroc_( &n, &nb, &mycol, &i_zero, &npcol );
   
@@ -174,8 +189,9 @@ HPCC_scaLAPACK_Calc(int n, int nb, int nprow, int npcol, int doIO, double *UGflo
   y = (double*) mkl_calloc(n, sizeof( double ), 64);
   z = (double*) mkl_calloc(n, sizeof( double ), 64);
   
-  lld_local = Mmax( numroc_( &n, &n, &myrow, &i_zero, &i_one), 1 );
-  lld = Mmax( mp, 1 );
+  lld_local = MAX( numroc_( &n, &n, &myrow, &i_zero, &nprow ), 1 );
+  
+  lld = MAX( mp, 1 );
   
   /*
   * Parallel DGEMM outline :
@@ -187,42 +203,43 @@ HPCC_scaLAPACK_Calc(int n, int nb, int nprow, int npcol, int doIO, double *UGflo
   *       N_= # Columns in Global Matrix
   *       MB_= Block Size for Row
   *       NB_ = Block Size for Column
-  *       RSRC_ = Process of pxq where 1st row is distributed
+  *       RSRC_ = Process of pxq where 1st row is distributed 
   *       CSRC_ = Process of pxq where 1st column is distributed
   *       LLD_= Leading Dimension of Matrix(a/b/c)
   */
  
   /*====================Descriptor Array Init(LOCAL)=======================*/
-  HPL_descinit( DescA_Local, &n, &n, &n, &n, &i_zero, &i_zero, &CONTXT, &lld_local, &info );
-  HPL_descinit( DescB_Local, &n, &n, &n, &n, &i_zero, &i_zero, &CONTXT, &lld_local, &info );
-  HPL_descinit( DescX_Local, &n, &i_one, &n, &n, &i_zero, &i_zero, &CONTXT, &lld_local, &info );
-  HPL_descinit( DescY_Local, &n, &i_one, &n, &n, &i_zero, &i_zero, &CONTXT, &lld_local, &info );
-  HPL_descinit( DescZ_Local, &n, &i_one, &n, &n, &i_zero, &i_zero, &CONTXT, &lld_local, &info );
+  HPL_descinit(DescA_Local, &n, &n, &n, &n, &i_zero, &i_zero, &CONTXT, &lld_local, &info);
+  HPL_descinit(DescB_Local, &n, &n, &n, &n, &i_zero, &i_zero, &CONTXT, &lld_local, &info);
+  HPL_descinit(DescC_Local, &n, &n, &n, &n, &i_zero, &i_zero, &CONTXT, &lld_local, &info);
+  HPL_descinit(DescX_Local, &n, &i_one, &n, &n, &i_zero, &i_zero, &CONTXT, &lld_local, &info);
   
   /*=======================Descriptor Array Init===========================*/
-  HPL_descinit( DescA, &n, &n, &nb, &nb, &i_zero, &i_zero, &CONTXT, &lld, &info );
-  HPL_descinit( DescB, &n, &n, &nb, &nb, &i_zero, &i_zero, &CONTXT, &lld, &info );
-  HPL_descinit( DescC, &n, &n, &nb, &nb, &i_zero, &i_zero, &CONTXT, &lld, &info );
+  HPL_descinit(DescA, &n, &n, &nb, &nb, &i_zero, &i_zero, &CONTXT, &lld, &info);
+  HPL_descinit(DescB, &n, &n, &nb, &nb, &i_zero, &i_zero, &CONTXT, &lld, &info);
+  HPL_descinit(DescC, &n, &n, &nb, &nb, &i_zero, &i_zero, &CONTXT, &lld, &info);
   
-  HPL_descinit( DescX, &n, &i_one, &n, &n, &i_zero, &i_zero, &CONTXT, &lld, & info );
-  HPL_descinit( DescY, &n, &i_one, &n, &n, &i_zero, &i_zero, &CONTXT, &lld, &info );
-  HPL_descinit( DescZ, &n, &i_one, &n, &n, &i_zero, &i_zero, &CONTXT, &lld, &info );
+  HPL_descinit(DescX, &n, &i_one, &n, &n, &i_zero, &i_zero, &CONTXT, &lld_local, & info);
+  HPL_descinit(DescY, &n, &i_one, &n, &n, &i_zero, &i_zero, &CONTXT, &lld_local, &info);
+  HPL_descinit(DescZ, &n, &i_one, &n, &n, &i_zero, &i_zero, &CONTXT, &lld_local, &info);
 
   /*==================Broadcast Arrays Over Processess=====================*/
   HPL_pdgeadd(&trans, &n, &n, &d_one, a_local, &i_one, &i_one, DescA_Local, &d_zero, a, &i_one, &i_one, DescA);
   HPL_pdgeadd(&trans, &n, &n, &d_one, b_local, &i_one, &i_one, DescB_Local, &d_zero, b, &i_one, &i_one, DescB);
-  HPL_pdgeadd(&trans, &n, &i_one, &d_one, a_local, &i_one, &i_one, DescX_Local, &d_zero, a, &i_one, &i_one, DescX);
-  HPL_pdgeadd(&trans, &n, &i_one, &d_one, b_local, &i_one, &i_one, DescY_Local, &d_zero, b, &i_one, &i_one, DescY);
-  HPL_pdgeadd(&trans, &n, &i_one, &d_one, a_local, &i_one, &i_one, DescZ_Local, &d_zero, a, &i_one, &i_one, DescZ);
-  
+  HPL_pdgeadd(&trans, &n, &n, &d_one, c_local, &i_one, &i_one, DescC_Local, &d_zero, c, &i_one, &i_one, DescC); 
+  HPL_pdgeadd(&trans, &n, &i_one, &d_one, x_local, &i_one, &i_one, DescX_Local, &d_zero, a, &i_one, &i_one, DescX);
+
   alpha = a[n / 2];
   beta  = b[n / 2];
-
+  
   if( ( myrow == 0 ) && ( mycol == 0 ) ){
         mkl_free( a_local );
         mkl_free( b_local );
+        mkl_free( c_local );
+        mkl_free( x_local );
   }
   t0 = MPI_Wtime();
+  
   /*==============================Main Calculation=====================================*/
   HPL_pdgemm("N","N", &n, &n, &n, &d_one, a, &i_one, &i_one, DescA, b, &i_one, &i_one, DescB, &d_zero, c, &i_one, &i_one, DescC );
   
@@ -234,39 +251,38 @@ HPCC_scaLAPACK_Calc(int n, int nb, int nprow, int npcol, int doIO, double *UGflo
     *GFLOPVAL = Gflops;
   }
   else Gflops = 0.0;
-  
+ 
   work = (double*) mkl_calloc(mp, sizeof( double ), 64);
   anorm = pdlange_( "I", &n, &n, a, &i_one, &i_one, DescA, work );
   bnorm = pdlange_( "I", &n, &n, b, &i_one, &i_one, DescB, work );
   diffnorm = pdlange_( "I", &n, &n, b, &i_one, &i_one, DescB, work );
   mkl_free( work );
+
+  
   /* y <- c*x */
-  pdgemv_("N", &n, &n , &d_one , c , &i_one, &i_one, DescC, x, &i_one, &i_one, DescX, &i_one, &d_zero, y , &i_one, &i_one,  DescY, &i_one);
 
   /* z <- b*x */
   pdgemv_("N", &n, &n, &d_one, b, &i_one, &i_one, DescB, x, &i_one, &i_one, DescX, &i_one, &d_zero, z, &i_one, &i_one, DescZ, &i_one);
-  
+
   /* y <- alpha * a * z - y */
   pdgemv_("N", &n, &n, &alpha, a, &i_one, &i_one, DescA, z, &i_one, &i_one, DescZ, &i_one, &d_negone, y, &i_one, &i_one, DescY, &i_one);
   
-  dmatgen( n, n, c, n, seed_c );
-
-  /* y <- beta * c_orig * x + y */
-  pdgemv_("N", &n, &n, &beta, c, &i_one, &i_one, DescC, x, &i_one, &i_one, DescX, &i_one, &d_one, y, &i_one, &i_one, DescY, &i_one);
-  
+ 
   /* Compute machine epsilon */
+  
   eps = pdlamch_( &CONTXT, "e" );
-
+  
   /* Compute residual */
   sres = diffnorm /( 2.0 * anorm * bnorm * eps );
-
+  
   HPL_gridexit(&CONTXT);
-  if(z) mkl_free(z);
-  if(y) mkl_free(y);
-  if(x) mkl_free(x);
-  if(c) mkl_free(c);
-  if(b) mkl_free(b);
-  if(a) mkl_free(a);
+
+  mkl_free(z);
+  mkl_free(y);
+  mkl_free(x);
+  mkl_free(c);
+  mkl_free(b);
+  mkl_free(a);
 
   return sres;
 }
@@ -348,7 +364,7 @@ HPCC_DGEMM_Calculation(int n, int doIO, double *UGflops, int *Un, int *Ufailure,
 }
 
 int
-HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufailure, int ResultFile) {
+HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufailure, int ResultFile, int ParallelSwitch) {
   int i,j, n, failure = 1;
   double sres, cnrm, xnrm,max,min;
   double Gflop = 0.0,  start,end;
@@ -419,8 +435,9 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
     for (int repnum = 0 ; repnum < repetitions; repnum++){
       /*Set n to fixed size array in Input File*/
       n = params->DGEMM_MatSize[i_matrix]; 
+      if (ParallelSwitch == 0) sres = HPCC_scaLAPACK_Calc(n, nbval, nprow, npcol, doIO, UGflops, Un, Ufailure, &Gflop);
       
-      sres = HPCC_scaLAPACK_Calc(n, nbval, nprow, npcol, doIO, UGflops, Un, Ufailure, &Gflop);
+      if (ParallelSwitch == 1) sres = HPCC_DGEMM_Calculation(n, doIO, UGflops, Un, Ufailure, &Gflop);
       
       if (doIO) fprintf(Rfile,"%d,%d,%f\n", params->DGEMM_MatSize[i_matrix],repnum+1,Gflop);
       if (Gflop>max) max=Gflop;
@@ -470,8 +487,8 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
       fprintf(outFile,"%10d  %10d %10.2f %10.2f %10.2f %10.2f  %10.2f   %10.2E\n", params->DGEMM_MatSize[i], params->DGEMM_MatRep[i], timer[i], avg[i],stddev[i], minimums[i],maximums[i], sresArr[i]);
     }
   }
-
   if (doIO) fprintf(outFile, "\nScaled residual: %g\n", sres);
+
 
   if (sres < params->test.thrsh) failure = 0;   
 

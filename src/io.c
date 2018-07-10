@@ -221,8 +221,8 @@ HPCC_InputFileInit(HPCC_Params *params) {
 
   /*ADDED Ohad Katz*/
   MPI_Bcast( &params->DGEMM_N, 1, MPI_INT, 0 , comm);
-  MPI_Bcast( &params->DGEMM_MatRep, 1, MPI_INT, 0 , comm);
-  MPI_Bcast( &params->DGEMM_MatSize, 1, MPI_INT, 0 , comm);
+  MPI_Bcast( &params->DGEMM_MatRep, params->DGEMM_N, MPI_INT, 0 , comm);
+  MPI_Bcast( &params->DGEMM_MatSize, params->DGEMM_N, MPI_INT, 0 , comm);
   
   /* copy what HPL has */
   params->PTRANSnpqs = params->npqs;
@@ -244,7 +244,7 @@ ErrorReduce(FILE *f, char *str, int eCode, MPI_Comm comm) {
   if (rCode) {
     if (f)
       fprintf( f, "%s", str );
-
+      printf("HELLO\n");
     return -1;
   }
 
@@ -317,7 +317,7 @@ HPCC_Init(HPCC_Params *params) {
 
   params->RunHPL = 0;
   params->RunStarDGEMM = 1;
-  params->RunSingleDGEMM = 1;
+  params->RunParallelDGEMM = 1;
   params->RunPTRANS = 0;
   params->RunStarStream = 0;
   params->RunSingleStream = 0;
@@ -340,7 +340,7 @@ HPCC_Init(HPCC_Params *params) {
 
   params->MPIRandomAccess_LCG_GUPs =
   params->MPIRandomAccess_GUPs = params->StarGUPs = params->SingleGUPs =
-  params->StarDGEMMGflops = params->SingleDGEMMGflops = -1.0;
+  params->StarDGEMMGflops = params->ParallelDGEMMGflops = -1.0;
   params->StarStreamCopyGBs = params->StarStreamScaleGBs = params->StarStreamAddGBs =
   params->StarStreamTriadGBs = params->SingleStreamCopyGBs = params->SingleStreamScaleGBs =
   params->SingleStreamAddGBs = params->SingleStreamTriadGBs =
@@ -505,7 +505,7 @@ HPCC_Finalize(HPCC_Params *params) {
   // fprintf( outputFile, "DGEMM_N=%d\n", params->DGEMM_N );
   
   fprintf( outputFile, "StarDGEMM_Gflops=%g\n",   params->StarDGEMMGflops );
-  fprintf( outputFile, "SingleDGEMM_Gflops=%g\n", params->SingleDGEMMGflops );
+  fprintf( outputFile, "ParallelDGEMM_Gflops=%g\n", params->ParallelDGEMMGflops );
   // fprintf( outputFile, "PTRANS_GBs=%g\n", params->PTRANSrdata.GBs );
   // fprintf( outputFile, "PTRANS_time=%g\n", params->PTRANSrdata.time );
   // fprintf( outputFile, "PTRANS_residual=%g\n", params->PTRANSrdata.residual );

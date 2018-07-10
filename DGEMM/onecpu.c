@@ -16,7 +16,7 @@ HPCC_StarDGEMM(HPCC_Params *params) {
   MPI_Comm_size( comm, &commSize );
   MPI_Comm_rank( comm, &myRank );
 
-  rv = HPCC_TestDGEMM( params, 0 == myRank, &localGflops, &n, &failure, 0 );
+  rv = HPCC_TestDGEMM( params, 0 == myRank, &localGflops, &n, &failure, 0, 1 );
   //params->DGEMM_N = n;
 
   MPI_Reduce( &rv, &errCount, 1, MPI_INT, MPI_SUM, 0, comm );
@@ -41,49 +41,38 @@ HPCC_StarDGEMM(HPCC_Params *params) {
 }
 
 int
-HPCC_SingleDGEMM(HPCC_Params *params) {
+HPCC_ParallelDGEMM(HPCC_Params *params) {
   int myRank, commSize;
-  int rv, errCount, rank, failure = 0;
-  double localGflops;
+  double localGflops, minGflops, maxGflops, avgGflops;
   int n;
-  double scl = 1.0 / RAND_MAX;
+  int rv, errCount, failure, failureAll;
   FILE *outputFile;
   MPI_Comm comm = MPI_COMM_WORLD;
 
-  localGflops = 0.0;
+  localGflops = minGflops = maxGflops = avgGflops = 0.0;
 
   MPI_Comm_size( comm, &commSize );
   MPI_Comm_rank( comm, &myRank );
 
-  srand(time(NULL));
-  scl *= (double)commSize;
+  rv = HPCC_TestDGEMM( params, 0 == myRank, &localGflops, &n, &failure, 0, 0 );
+  //params->DGEMM_N = n;
 
-  /* select a node at random, but not node 0 (unless there is just one node) */
-  if (1 == commSize)
-    rank = 0;
-  else
-    for (rank = 0; ; rank = (int)(scl * rand())) {
-      if (rank > 0 && rank < commSize) break;
-    }
+  MPI_Reduce( &rv, &errCount, 1, MPI_INT, MPI_SUM, 0, comm );
+  MPI_Allreduce( &failure, &failureAll, 1, MPI_INT, MPI_MAX, comm );
+  if (failureAll) params->Failure = 1;
 
-  MPI_Bcast( &rank, 1, MPI_INT, 0, comm ); /* broadcast the rank selected on node 0 */
+  MPI_Reduce( &localGflops, &minGflops, 1, MPI_DOUBLE, MPI_MIN, 0, comm );
+  MPI_Reduce( &localGflops, &avgGflops, 1, MPI_DOUBLE, MPI_SUM, 0, comm );
+  MPI_Reduce( &localGflops, &maxGflops, 1, MPI_DOUBLE, MPI_MAX, 0, comm );
+  avgGflops /= (double)commSize;
 
-  if (myRank == rank) /* if this node has been selected */
-    rv = HPCC_TestDGEMM( params, 0 == myRank ? 1 : 0, &localGflops, &n, &failure, 1);
-
-  MPI_Bcast( &rv, 1, MPI_INT, rank, comm ); /* broadcast error code */
-  MPI_Bcast( &failure, 1, MPI_INT, rank, comm ); /* broadcast failure indication */
-  errCount = rv;
-  if (failure) params->Failure = 1;
-
-  /* broadcast result */
-  MPI_Bcast( &localGflops, 1, MPI_DOUBLE, rank, comm );
-  params->SingleDGEMMGflops = localGflops;
+  MPI_Bcast( &avgGflops, 1, MPI_DOUBLE, 0, comm ); params->StarDGEMMGflops = avgGflops;
 
   BEGIN_IO( myRank, params->outFname, outputFile);
   fprintf( outputFile, "Node(s) with error %d\n", errCount );
-  fprintf( outputFile, "Node selected %d\n", rank );
-  fprintf( outputFile, "Single DGEMM Gflop/s %.6f\n", localGflops );
+  fprintf( outputFile, "Minimum Gflop/s %.6f\n", minGflops );
+  fprintf( outputFile, "Average Gflop/s %.6f\n", avgGflops );
+  fprintf( outputFile, "Maximum Gflop/s %.6f\n", maxGflops );
   END_IO( myRank, outputFile );
 
   return 0;

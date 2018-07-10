@@ -74,7 +74,7 @@ typedef struct {
     MPIRandomAccess_LCG_TimeBound,
     StarStreamCopyGBs, StarStreamScaleGBs,
     StarStreamAddGBs, StarStreamTriadGBs, SingleStreamCopyGBs, SingleStreamScaleGBs,
-    SingleStreamAddGBs, SingleStreamTriadGBs, StarDGEMMGflops, SingleDGEMMGflops;
+    SingleStreamAddGBs, SingleStreamTriadGBs, StarDGEMMGflops, ParallelDGEMMGflops;
   double StarFFTGflops, SingleFFTGflops, MPIFFTGflops, MPIFFT_maxErr;
   double MaxPingPongLatency, RandomlyOrderedRingLatency, MinPingPongBandwidth,
     NaturallyOrderedRingBandwidth, RandomlyOrderedRingBandwidth,
@@ -96,7 +96,7 @@ typedef struct {
   size_t HPLMaxProcMem;
   
   int HPLMaxProc, HPLMinProc;
-  int RunHPL, RunStarDGEMM, RunSingleDGEMM,
+  int RunHPL, RunStarDGEMM, RunParallelDGEMM,
     RunPTRANS, RunStarStream, RunSingleStream,
     RunMPIRandomAccess_LCG, RunStarRandomAccess_LCG, RunSingleRandomAccess_LCG,
     RunMPIRandomAccess, RunStarRandomAccess, RunSingleRandomAccess,
@@ -160,7 +160,7 @@ extern float HPL_slamch (const HPL_T_MACH);
 extern double HPCC_dweps();
 extern float HPCC_sweps();
 extern int HPCC_StarDGEMM(HPCC_Params *params);
-extern int HPCC_SingleDGEMM(HPCC_Params *params);
+extern int HPCC_ParallelDGEMM(HPCC_Params *params);
 extern int PTRANS(HPCC_Params *params);
 extern int HPCC_MPIRandomAccess_LCG(HPCC_Params *params);
 extern int HPCC_SingleRandomAccess_LCG(HPCC_Params *params);
@@ -175,7 +175,7 @@ extern int HPCC_SingleFFT(HPCC_Params *params);
 extern int HPCC_MPIFFT(HPCC_Params *params);
 
 extern int HPCC_TestFFT(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufailure);
-extern int HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufailure, int ResultChange);
+extern int HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufailure, int ResultChange, int ParallelSwitch);
 
 extern int MaxMem(int nprocs, int imrow, int imcol, int nmat, int *mval, int *nval, int nbmat,
   int *mbval, int *nbval, int ngrids, int *npval, int *nqval, long *maxMem);

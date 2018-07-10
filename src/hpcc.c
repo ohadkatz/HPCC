@@ -181,21 +181,21 @@ main(int argc, char *argv[]) {
  
 
   /* -------------------------------------------------- */
-  /*                    SingleDGEMM                     */
+  /*                 Parallel DGEMM                     */
   /* -------------------------------------------------- */
 
   MPI_Barrier( MPI_COMM_WORLD );
 
   BEGIN_IO( myRank, outFname, outputFile);
-  fprintf( outputFile, "Begin of SingleDGEMM section.\n" );
+  fprintf( outputFile, "Begin of ParallelDGEMM section.\n" );
   END_IO( myRank, outputFile );
 
-  if (params.RunSingleDGEMM) HPCC_SingleDGEMM( &params );
+  if (params.RunParallelDGEMM) HPCC_ParallelDGEMM( &params );
  
   time( &currentTime );
   BEGIN_IO( myRank, outFname, outputFile);
   fprintf( outputFile,"Current time (%ld) is %s\n",(long)currentTime,ctime(&currentTime));
-  fprintf( outputFile, "End of SingleDGEMM section.\n" );
+  fprintf( outputFile, "End of ParallelDGEMM section.\n" );
   END_IO( myRank, outputFile );
   
   /* -------------------------------------------------- */
