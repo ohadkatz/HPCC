@@ -3,20 +3,24 @@ Author = Ohad Katz
 Mentor = Nikolay Simakov
 
 Testing Will be as follows:
+== MATRIX SIZES ==   128  256 512 1024 2048 3072 4096 6144 8192 12288 16384 
+
+== # REPETITIONS ==  1650 500 250  150  100  75   50   25   25   25    25   
+
 **PART 1**
 Multi Nodes:
 Parallel
 				   NUM T     MPI NP	
- ___________________________________________________
-|		|		|	   |	    |
-|True Parallel  |   PURE MPI	|    1	   |  PPN*2 |
-|		|		|	   |	    |
-|		| OPENMP/MPI H	|   PPN	   |   NA   |
-|		| 		|	   |	    |
-|	    	|		|          |        |
-|Embarassingly	|    PURE MPI	|    1     |  PPN*2 |
-|    Parallel	|		|	   |	    |
-|_______________|_______________|__________|________|
+ ___________________________________________________________
+|		|		|	   |	            |
+|True Parallel  |   PURE MPI	|    1	   |  PPN * # Nodes |
+|		|		|	   |	            |
+|		| OPENMP/MPI H	|   PPN	   |   NA           |
+|		| 		|	   |	            |
+|	    	|		|          |                | 
+|Embarassingly	|    PURE MPI	|    1     |  PPN * # Nodes |
+|    Parallel	|		|	   |	    	    |
+|_______________|_______________|__________|________________|
 
 **PART 2 **
 Single:
@@ -27,12 +31,12 @@ Single:
 |		|		|	   |	    |
 |		|		|	   |	    |
 |		|		|	   |	    |
-| True Parallel | OPENMP/MPI H	|   PPN	   |	1   |
+| True Parallel |   OPENMP H	|   PPN	   |	1   |
 |		| 		|	   |        |
 |		|   PURE MPI	|    1     |   PPN  |
 |		|  (scalapack)	|   	   |	    |
 |	    	|		|          |        |
-| Embarassingly	|    PURE MPI	|    1     |   PPN  |
+| Embarassingly	|   PURE MPI	|    1     |   PPN  |
 |    Parallel	|		|	   |	    |
 |_______________|_______________|__________|________|
 
