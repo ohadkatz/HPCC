@@ -119,7 +119,7 @@ typedef struct {
   int STREAM_repetitions[HPL_MAX_PARAM];
 
   /*Added Results output*/
-  char SingleResults[256 + 1];
+  char ParallelResults[256 + 1];
   char StarResults[256 + 1];
 } HPCC_Params;
 /*

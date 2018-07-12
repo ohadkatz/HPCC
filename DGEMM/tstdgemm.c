@@ -94,7 +94,7 @@ dnrm_inf(int m, int n, double *a, int lda) {
 */
 double
 HPCC_scaLAPACK_Calc(int n, int nb, int nprow, int npcol, int doIO, double *UGflops, int *Un, int *Ufailure, double *GFLOPVAL){
-  double *a=NULL, *a_local, *b=NULL, *b_local, *c=NULL, *c_local, *x=NULL, *x_local, *y=NULL, *z=NULL,  alpha, beta, sres;
+  double *a=NULL, *a_local, *b=NULL, *b_local, *c=NULL, *c_local, *x=NULL, *x_local, *y=NULL, *z=NULL,  alpha=0, beta=0, sres;
   double Gflops = 0.0, dn, t0, t1, thresh= 16.0;
   int seed_a, seed_b, seed_c, seed_x, mp, nq;
   int one=1,zero=0;
@@ -229,8 +229,8 @@ HPCC_scaLAPACK_Calc(int n, int nb, int nprow, int npcol, int doIO, double *UGflo
   HPL_pdgeadd(&trans, &n, &n, &d_one, c_local, &i_one, &i_one, DescC_Local, &d_zero, c, &i_one, &i_one, DescC); 
   HPL_pdgeadd(&trans, &n, &i_one, &d_one, x_local, &i_one, &i_one, DescX_Local, &d_zero, a, &i_one, &i_one, DescX);
 
-  alpha = a[n / 2];
-  beta  = b[n / 2];
+  alpha = 1.0;
+  beta  = 0.0;
   
   if( ( myrow == 0 ) && ( mycol == 0 ) ){
         mkl_free( a_local );
@@ -319,8 +319,8 @@ HPCC_DGEMM_Calculation(int n, int doIO, double *UGflops, int *Un, int *Ufailure,
   seed_x = (int)time( NULL );
   dmatgen(n, 1, x, n, seed_x);
 
-  alpha = a[n / 2];
-  beta  = b[n / 2];
+  alpha = 1.0;
+  beta  = 0.0;
 
   t0 = MPI_Wtime();
   // FOR EDUCATIONAL PURPOSES: Unoptimized Matrix-Matrix Multiplication= ODGEMM_Calc(a,b,c,n);
@@ -384,7 +384,7 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
       Rfile = fopen(params->StarResults, "a");
     }
     else{
-      Rfile = fopen(params->SingleResults, "a");
+      Rfile = fopen(params->ParallelResults, "a");
     }
 
     if (! outFile ) {

@@ -410,23 +410,26 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
 
   MPI_Comm_size( comm, &numranks );
   MPI_Comm_rank( comm, &myrank );
+
+  int repetitions= params->STREAM_repetitions[i_vector];
+
+
+  double  scalar, t,  t1, times[4][repetitions], times_copy[4][repetitions];
+
+  double GiBs = 1024.0 * 1024.0 * 1024.0, curGBs=0;
+
+
+  array_elements =params->STREAM_UserVector[i_vector]; /* Need 3 vectors */
+
+  params->StreamVectorSize = array_elements;
+
   for(i_vector= 0; i_vector < params->STREAM_N; i_vector++){
-    int repetitions= params->STREAM_repetitions[i_vector];
-    
-
-    double  scalar, t,  t1, times[4][repetitions], times_copy[4][repetitions];
-
-    double GiBs = 1024.0 * 1024.0 * 1024.0, curGBs=0;
-    
-    
-    array_elements =params->STREAM_UserVector[i_vector]; /* Need 3 vectors */
-  
-    params->StreamVectorSize = array_elements;
-
-    
     a = HPCC_XMALLOC( double, array_elements );
     b = HPCC_XMALLOC( double, array_elements );
     c = HPCC_XMALLOC( double, array_elements );
+    
+    array_elements =params->STREAM_UserVector[i_vector]; /* Need 3 vectors */
+    params->StreamVectorSize = array_elements;
 
     // if (!a || !b || !c) {
     //   if (c) HPCC_free(c);
@@ -677,7 +680,7 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
         case 3: *triadGBs = gbVector[i_vector]; break;
         }
       }
-    }
+    
     if (doIO)
       fprintf( outFile, HLINE);
 
@@ -697,7 +700,7 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
     HPCC_free(c);
     HPCC_free(b);
     HPCC_free(a);
-    
+  }
     if (doIO) {
       fflush( outFile );
       fclose( outFile );

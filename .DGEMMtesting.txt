@@ -15,7 +15,7 @@ Parallel
 |		|		|	   |	            |
 |True Parallel  |   PURE MPI	|    1	   |  PPN * # Nodes |
 |		|		|	   |	            |
-|		| OPENMP/MPI H	|   PPN	   |   NA           |
+|		| OPENMP/MPI H	|   PPN	   |  NA            |
 |		| 		|	   |	            |
 |	    	|		|          |                | 
 |Embarassingly	|    PURE MPI	|    1     |  PPN * # Nodes |
@@ -31,7 +31,7 @@ Single:
 |		|		|	   |	    |
 |		|		|	   |	    |
 |		|		|	   |	    |
-| True Parallel |   OPENMP H	|   PPN	   |	1   |
+| True Parallel |    OPENMP 	|   PPN	   |	1   |
 |		| 		|	   |        |
 |		|   PURE MPI	|    1     |   PPN  |
 |		|  (scalapack)	|   	   |	    |

@@ -256,9 +256,9 @@ HPCC_Init(HPCC_Params *params) {
   int myRank, commSize;
   int i, nMax, nbMax, procCur, procMax, procMin, errCode;
   double totalMem;
-  char inFname[12] = "hpccinf.txt", outFname[13] = "hpccoutf.txt", SingleResults[18] = "SingleResults.txt", StarResults[16] = "StarResults.txt";
+  char inFname[12] = "hpccinf.txt", outFname[13] = "hpccoutf.txt", ParallelResults[20] = "ParallelResults.txt", StarResults[16] = "StarResults.txt";
   FILE *outputFile;
-  FILE *SingleRFile;
+  FILE *ParallelRFile;
   FILE *StarRFile;
   MPI_Comm comm = MPI_COMM_WORLD;
   time_t currentTime;
@@ -270,19 +270,19 @@ HPCC_Init(HPCC_Params *params) {
 
   outputFile = NULL;
   /*Added*/
-  SingleRFile= NULL;
+  ParallelRFile= NULL;
   StarRFile= NULL;
   MPI_Comm_size( comm, &commSize );
   MPI_Comm_rank( comm, &myRank );
   strcpy( params->inFname, inFname );
   strcpy( params->outFname, outFname );
   /*ADDED*/
-  strcpy( params->SingleResults, SingleResults );
+  strcpy( params->ParallelResults, ParallelResults );
   strcpy( params->StarResults, StarResults);
   if (0 == myRank)
     outputFile = fopen( params->outFname, "a" );
     /*ADDED R results*/
-    SingleRFile = fopen(params->SingleResults, "w");
+    ParallelRFile = fopen(params->ParallelResults, "w");
     StarRFile = fopen(params->StarResults, "w");
 
   errCode = 0;

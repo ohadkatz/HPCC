@@ -11,7 +11,7 @@ main(int argc, char *argv[]) {
   int myRank, commSize;
   char *outFname;
   /*Added*/
-  char *SingleResults;
+  char *ParallelResults;
   char *StarResults;
   FILE *outputFile;
   FILE *SingleRFile;
@@ -32,7 +32,7 @@ main(int argc, char *argv[]) {
   MPI_Comm_rank( MPI_COMM_WORLD, &myRank );
 
   outFname = params.outFname;
-  SingleResults = params.SingleResults;
+  ParallelResults = params.ParallelResults;
   StarResults = params.StarResults;
   /* -------------------------------------------------- */
   /*                 MPI RandomAccess                   */
