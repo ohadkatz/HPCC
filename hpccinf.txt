@@ -8,8 +8,8 @@ HPL.out      output file name (if any)
 80           NBs
 0            PMAP process mapping (0=Row-,1=Column-major)
 1            # of process grids (P x Q)
-2            Ps
-2            Qs
+1            Ps
+1            Qs
 16.0         threshold
 1            # of panel fact
 2            PFACTs (0=left, 1=Crout, 2=Right)
@@ -34,7 +34,7 @@ HPL.out      output file name (if any)
 1200 10000 30000            values of N
 0                           number of additional blocking sizes for PTRANS
 40 9 8 13 13 20 16 32 64    values of NB
-128 256                        Matrix Sizes
-2 2            Number of Repetitions 
-100                         Vector Size
+128 128 256 512 1024 2048 3072 4096 6144 8192 12288 16384         Matrix Sizes
+150 1599 599 250 150 100 75 50 25 25 25 25      Number of Repetitions 
+1321312                         Vector Size
 100                         Vector Rep
