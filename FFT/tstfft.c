@@ -68,7 +68,7 @@ TestFFT1(HPCC_Params *params, int doIO, FILE *outFile, double *UGflops, int *Un,
   fftw_one( p, in, out );
   t2 += MPI_Wtime();
 
-  fftw_destroy_plan(p);
+  //fftw_destroy_plan(p);
 
   ip = HPCC_fftw_create_plan( n, FFTW_BACKWARD, FFTW_ESTIMATE );
 
@@ -76,7 +76,6 @@ TestFFT1(HPCC_Params *params, int doIO, FILE *outFile, double *UGflops, int *Un,
     t3 = -MPI_Wtime();
     HPCC_fftw_one( ip, out, in );
     t3 += MPI_Wtime();
-
     HPCC_fftw_destroy_plan( ip );
   }
 
