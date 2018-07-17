@@ -15,19 +15,22 @@ TestFFT1(HPCC_Params *params, int doIO, FILE *outFile, double *UGflops, int *Un,
   double maxErr, tmp1, tmp2, tmp3, t0, t1, t2, t3;
   int i, n, flags, failure = 1;
   double deps = HPL_dlamch( HPL_MACH_EPS );
-
+  printf("%d\n", params->FFT_Size);
+  for( int i_vec = 0; i_vec < params->FFT_Size; ++i){
 #ifdef HPCC_FFT_235
   int f[3];
 
   /* Need 2 vectors for input and output and 1 vector of scratch spaces */
-  n = HPCC_LocalVectorSize( params, 3, sizeof(fftw_complex), 0 );
-
+  // n = HPCC_LocalVectorSize( params, 3, params->FFT_UserVector[i_vec], 0 );
+  n = params->FFT_UserVector[i_vec];
   /* Adjust local size for factors */
   for ( ; HPCC_factor235( n, f ); n--)
     ; /* EMPTY */
 #else
   /* Need 2 vectors and vectors' sizes as power of 2 */
-  n = HPCC_LocalVectorSize( params, 2, sizeof(fftw_complex), 1 );
+  //n = params->FFT_N;;
+  n = params->FFT_UserVector[i_vec];
+  // n = HPCC_LocalVectorSize( params, 2, params->FFT_UserVector[0], 0 );
 #endif
 
   /* need to use fftw_malloc() so that the returned pointers will be aligned properly for SSE
@@ -78,7 +81,7 @@ TestFFT1(HPCC_Params *params, int doIO, FILE *outFile, double *UGflops, int *Un,
     t3 += MPI_Wtime();
     HPCC_fftw_destroy_plan( ip );
   }
-
+  
   HPCC_bcnrand( 2*(s64Int)n, 0, out ); /* regenerate data */
   maxErr = 0.0;
   for (i = 0; i < n; i++) {
@@ -87,7 +90,7 @@ TestFFT1(HPCC_Params *params, int doIO, FILE *outFile, double *UGflops, int *Un,
     tmp3 = sqrt( tmp1*tmp1 + tmp2*tmp2 );
     maxErr = maxErr >= tmp3 ? maxErr : tmp3;
   }
-
+  
   if (maxErr / log(n) / deps < params->test.thrsh) failure = 0;
 
   if (doIO) {
@@ -98,18 +101,19 @@ TestFFT1(HPCC_Params *params, int doIO, FILE *outFile, double *UGflops, int *Un,
     fprintf( outFile, "Inverse FFT: %9.3f\n", t3 );
     fprintf( outFile, "max(|x-x0|): %9.3e\n", maxErr );
   }
-
+  //printf("HERE\n");
+  }
   if (t2 > 0.0) Gflops = 1e-9 * (5.0 * n * log(n) / log(2.0)) / t2;
 
   comp_end:
-
+  
   if (out) HPCC_fftw_free( out );
   if (in)  HPCC_fftw_free( in );
-
+  
   *UGflops = Gflops;
   *Un = n;
   *Ufailure = failure;
-
+  
   return 0;
 }
 

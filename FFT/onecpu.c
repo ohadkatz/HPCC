@@ -18,7 +18,7 @@ HPCC_StarFFT(HPCC_Params *params) {
 
   rv = HPCC_TestFFT( params, 0 == commRank, &localGflops, &n, &failure );
   params->FFT_N = n;
-
+  printf("%d\n", n);
   MPI_Reduce( &rv, &errCount, 1, MPI_INT, MPI_SUM, 0, comm );
   MPI_Allreduce( &failure, &failureAll, 1, MPI_INT, MPI_MAX, comm );
   if (failureAll) params->Failure = 1;

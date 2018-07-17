@@ -108,7 +108,7 @@
 
 static int array_elements;
 # define N 2000000
-# define NTIMES 10
+
 
 /*
 // Make the scalar coefficient modifiable at compile time.
@@ -196,7 +196,7 @@ extern void tuned_STREAM_Triad(double scalar);
 #endif
 
 static void
-checkSTREAMresults(FILE *outFile, int doIO, double *AvgErrByRank, int numranks, int *failure) {
+checkSTREAMresults(FILE *outFile, int doIO, double *AvgErrByRank, int numranks, int *failure, int NTIMES) {
   double aj,bj,cj,scalar;
   double aSumErr,bSumErr,cSumErr;
   double aAvgErr,bAvgErr,cAvgErr;
@@ -212,7 +212,7 @@ checkSTREAMresults(FILE *outFile, int doIO, double *AvgErrByRank, int numranks, 
   aj = 2.0E0 * aj;
   /* now execute timing loop */
   scalar = SCALAR;
-  for (k=0; k<NTIMES; k++) {
+  for (k=0; k< NTIMES; k++) {
     cj = aj;
     bj = scalar*cj;
     cj = aj+bj;
@@ -344,7 +344,7 @@ checktick() {
 For the MPI code I separate the computation of errors from the error
 reporting output functions (which are handled by MPI rank 0).
 */
-void computeSTREAMerrors(double *aAvgErr, double *bAvgErr, double *cAvgErr)
+void computeSTREAMerrors(double *aAvgErr, double *bAvgErr, double *cAvgErr, int NTIMES)
 {
   double aj,bj,cj,scalar;
   double aSumErr,bSumErr,cSumErr;
@@ -389,19 +389,25 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
   int quantum,  BytesPerWord, numranks, myrank;
   int i_vector,j, k;
   FILE *outFile;
+  FILE *RFile;
   double *AvgErrByRank;
   double t0;
   double gbVector[params->STREAM_N],
          VectorAvg[params->STREAM_N],
          VectorMax[params->STREAM_N],
          VectorMin[params->STREAM_N];
-
   
   if (doIO) {
     outFile = fopen( params->outFname, "a" );
+    RFile= fopen( params->Results, "a" );
     if (! outFile) {
       outFile = stderr;
       fprintf( outFile, "Cannot open output file.\n" );
+      return 1;
+    }
+    if (! RFile){
+      RFile = stderr;
+      fprintf( RFile, "Cannot open output file.\n" );
       return 1;
     }
   }
@@ -411,19 +417,17 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
   MPI_Comm_size( comm, &numranks );
   MPI_Comm_rank( comm, &myrank );
 
-  int repetitions= params->STREAM_repetitions[i_vector];
-
-
-  double  scalar, t,  t1, times[4][repetitions], times_copy[4][repetitions];
-
-  double GiBs = 1024.0 * 1024.0 * 1024.0, curGBs=0;
-
-
-  array_elements =params->STREAM_UserVector[i_vector]; /* Need 3 vectors */
-
-  params->StreamVectorSize = array_elements;
-
   for(i_vector= 0; i_vector < params->STREAM_N; i_vector++){
+    int repetitions= params->STREAM_repetitions[i_vector];
+    double  scalar, t,  t1, times[4][repetitions], times_copy[4][repetitions];
+
+    double GiBs = 1024.0 * 1024.0 * 1024.0, curGBs=0;
+
+
+    array_elements =params->STREAM_UserVector[i_vector]; /* Need 3 vectors */
+
+    params->StreamVectorSize = array_elements;
+
     a = HPCC_XMALLOC( double, array_elements );
     b = HPCC_XMALLOC( double, array_elements );
     c = HPCC_XMALLOC( double, array_elements );
@@ -482,7 +486,7 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
-        for (j=0; j<array_elements; j++) {
+        for (j=0; j<params->STREAM_N; j++) {
           a[j] = 1.0;
           b[j] = 2.0;
           c[j] = 0.0;
@@ -630,7 +634,7 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
     MPI_Allreduce( times_copy, times, 4*repetitions, MPI_DOUBLE, MPI_MIN, comm );
     
     /* Back to the original code, but now using the minimum global timing across all ranks */
-    for (j=0; j<4; j++)
+    for (j=0; j<params->STREAM_N; j++)
     {
       avgtime[j] = 0.0;
       mintime[j] = times[j][1];
@@ -639,7 +643,7 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
     }
     for (k=1; k<repetitions; k++) /* note -- skip first iteration */
     {
-      for (j=0; j<4; j++)
+      for (j=0; j<params->STREAM_N; j++)
       {
         avgtime[j] = avgtime[j] + times[j][k];
         mintime[j] = Mmin(mintime[j], times[j][k]);
@@ -650,7 +654,7 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
     
     if (doIO)
       fprintf( outFile, "Function      Rate (GB/s)   Avg time     Min time     Max time\n");
-    for (j=0; j<4; j++) {
+    for (j=0; j<params->STREAM_N; j++) {
       
       avgtime[j] /= (double)(repetitions - 1); /* note -- skip first iteration */
       
@@ -664,7 +668,7 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
       VectorMin[i_vector]= mintime[j];
       
 
-      if (doIO)
+      if (doIO){
         fprintf( outFile, "%s%11.4f  %11.4f  %11.4f  %11.4f\n", label[j],
                 gbVector[i_vector],
                 // avgtime[j],
@@ -673,6 +677,11 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
                 VectorAvg[i_vector],
                 VectorMin[i_vector],
                 VectorMax[i_vector]);
+        for(int k =0 ; k < repetitions; k++){
+          fprintf(RFile,"%s,%d,%d,%f\n","STREAM",k+1, params->STREAM_UserVector[i_vector], gbVector[i_vector]);
+        }
+      }
+
       switch (j) {
         case 0: *copyGBs = gbVector[i_vector]; break;
         case 1: *scaleGBs = gbVector[i_vector]; break;
@@ -685,13 +694,13 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
       fprintf( outFile, HLINE);
 
     /* --- Every Rank Checks its Results --- */
-    computeSTREAMerrors(&AvgError[0], &AvgError[1], &AvgError[2]);
+    computeSTREAMerrors(&AvgError[0], &AvgError[1], &AvgError[2], repetitions);
     /* --- Collect the Average Errors for Each Array on Rank 0 --- */
     MPI_Gather(AvgError, 3, MPI_DOUBLE, AvgErrByRank, 3, MPI_DOUBLE, 0, comm);
     
     /* -- Combined averaged errors and report on Rank 0 only --- */
     if (myrank == 0) {
-      checkSTREAMresults( outFile, doIO, AvgErrByRank, numranks, failure );
+      checkSTREAMresults( outFile, doIO, AvgErrByRank, numranks, failure, repetitions );
       if (doIO) fprintf( outFile, HLINE);
     }
   
@@ -701,12 +710,13 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
     HPCC_free(b);
     HPCC_free(a);
   }
-    if (doIO) {
-      fflush( outFile );
-      fclose( outFile );
-    }
-    
-    return 0;
+  if (doIO) {
+    fflush( outFile );
+    fclose( outFile );
+    fflush(RFile);
+    fclose(RFile);
+  }
+  return 0;
 }
 
 void tuned_STREAM_Copy()

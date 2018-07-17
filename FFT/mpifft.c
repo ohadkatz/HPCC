@@ -24,7 +24,7 @@ MPIFFT0(HPCC_Params *params, int doIO, FILE *outFile, MPI_Comm comm, int locN,
 #ifdef USING_FFTW
   int ilocn, iloc0, ialocn, ialoc0, itls;
 #endif
-
+  
   failure = 1;
   Gflops = -1.0;
   deps = HPL_dlamch( HPL_MACH_EPS );
@@ -32,8 +32,8 @@ MPIFFT0(HPCC_Params *params, int doIO, FILE *outFile, MPI_Comm comm, int locN,
 
   MPI_Comm_size( comm, &commSize );
   MPI_Comm_rank( comm, &commRank );
-
-  n = locN;
+for(int i_vec=0; i_vec<params->FFT_Size; i++){
+  n = params->FFT_UserVector[i_vec];
 
   /* number of processes have been factored out - need to put it back in */
   n *= commSize;
@@ -82,10 +82,10 @@ MPIFFT0(HPCC_Params *params, int doIO, FILE *outFile, MPI_Comm comm, int locN,
   sAbort = 0;
   if (! inout || ! work) sAbort = 1;
   MPI_Allreduce( &sAbort, &rAbort, 1, MPI_INT, MPI_SUM, comm );
-  if (rAbort > 0) {
-    fftw_mpi_destroy_plan( p );
-    goto comp_end;
-  }
+  // if (rAbort > 0) {
+  //   fftw_mpi_destroy_plan( p );
+  //   goto comp_end;
+  // }
 
   /* Make sure that `inout' and `work' are initialized in parallel if using
      Open MP: this will ensure better placement of pages if first-touch policy
@@ -121,18 +121,19 @@ MPIFFT0(HPCC_Params *params, int doIO, FILE *outFile, MPI_Comm comm, int locN,
   HPCC_bcnrand( 2 * tls, 53 * commRank * 2 * tls, work ); /* regenerate data */
 
   maxErr = 0.0;
-  for (i = 0; i < locn; ++i) {
+  for (i = 0; i < n; ++i) {
     tmp1 = c_re( inout[i] ) - c_re( work[i] );
     tmp2 = c_im( inout[i] ) - c_im( work[i] );
     tmp3 = sqrt( tmp1*tmp1 + tmp2*tmp2 );
     maxErr = maxErr >= tmp3 ? maxErr : tmp3;
   }
+  
   MPI_Allreduce( &maxErr, UmaxErr, 1, MPI_DOUBLE, MPI_MAX, comm );
   maxErr = *UmaxErr;
   if (maxErr / log(n) / deps < params->test.thrsh) failure = 0;
 
   if (t2 > 0.0) Gflops = 1e-9 * (5.0 * n * log(n) / log(2.0)) / t2;
-
+  
   if (doIO) {
     fprintf( outFile, "Number of nodes: %d\n", commSize );
     fprintf( outFile, "Vector size: %20.0f\n", tmp1 = (double)n );
@@ -143,8 +144,8 @@ MPIFFT0(HPCC_Params *params, int doIO, FILE *outFile, MPI_Comm comm, int locN,
     fprintf( outFile, "max(|x-x0|): %9.3e\n", maxErr );
     fprintf( outFile, "Gflop/s: %9.3f\n", Gflops );
   }
-
-  comp_end:
+  }
+  //comp_end:
 
   if (work) HPCC_fftw_free( work );
   if (inout) HPCC_fftw_free( inout );
@@ -155,6 +156,7 @@ MPIFFT0(HPCC_Params *params, int doIO, FILE *outFile, MPI_Comm comm, int locN,
   *Un = n;
   *UmaxErr = maxErr;
   *Ufailure = failure;
+ 
 }
 
 int
