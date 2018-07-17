@@ -34,7 +34,9 @@ HPL.out      output file name (if any)
 1200 10000 30000            values of N
 0                           number of additional blocking sizes for PTRANS
 40 9 8 13 13 20 16 32 64    values of NB
-128 128 256 512 1024 2048 3072 4096 6144 8192 12288 16384         Matrix Sizes
-150 1599 599 250 150 100 75 50 25 25 25 25      Number of Repetitions 
-1321312                         Vector Size
-100                         Vector Rep
+128 128 256 512  Mat Size
+150 1500 500 500 Mat Rep
+121312 1223256 512  Vec Size
+130 120 1500  STREAM Vec Rep
+64000 FFT Vector Size
+1 FFT Repetitions

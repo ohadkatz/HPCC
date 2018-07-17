@@ -118,9 +118,13 @@ typedef struct {
   int STREAM_N;
   int STREAM_repetitions[HPL_MAX_PARAM];
 
+  /*ADDED FFT INPUTS*/
+  int FFT_UserVector[HPL_MAX_PARAM];
+  int FFT_Size;
+  int FFT_repetitions[HPL_MAX_PARAM];
   /*Added Results output*/
-  char ParallelResults[256 + 1];
-  char StarResults[256 + 1];
+  char Results[256 + 1];
+
 } HPCC_Params;
 /*
 This is what needs to be done to add a new benchmark:

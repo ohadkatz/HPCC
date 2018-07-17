@@ -48,7 +48,7 @@ InputReset
 printf "===================== PART 2 =========================\n"
 #=======================Single Node: Serial=================================#
 printf "Serial Run on a Single Node! \n"
-OMP_NUM_THREADS=1 mpirun -np 1 ./hpcc
+time OMP_NUM_THREADS=1  mpirun -np 1 ./hpcc
 #TURN OFF SCALAPACK??
 cp hpccoutf.txt $OutputDir/Serial/Serialout.txt
 cp StarResults.txt $OutputDir/Serial/SerialResults.txt
@@ -59,7 +59,7 @@ printf "All set with serial! \n"
 
 printf "True Parallel Run on Single Node! \n"
 for Thread in "${Runs[@]}"; do 
-    OMP_NUM_THREADS=$Thread mpirun -np 1 ./hpcc
+    time OMP_NUM_THREADS=$Thread  mpirun -np 1 ./hpcc
     cp hpccoutf.txt $OutputDir/TotParallel/TPout$Thread.txt
     cp StarResults.txt $OutputDir/TotParallel/TPresults$Thread.txt
     Reset
@@ -69,7 +69,7 @@ printf "True Parallel Run (scaLAPACK) on Single Node! \n"
 
 for P in "${Runs[@]}"; do 
     Switch $P
-    OMP_NUM_THREADS=1 mpirun -np $P ./hpcc
+    time OMP_NUM_THREADS=1  mpirun -np $P ./hpcc
     cp hpccoutf.txt $OutputDir/TotParallel/ScaLAPACK/ScaLAPACKTPSPout$P.txt
     cp ParallelResults.txt $OutputDir/TotParallel/ScaLAPACK/TPSPresults$P.txt
     Reset
@@ -81,7 +81,7 @@ InputReset
 printf "Embarassingly Parallel Run on Single Node!\n"
 for Q in "${Runs[@]}"; do 
     Switch $Q
-    OMP_NUM_THREADS=1 mpirun -np $Q ./hpcc
+    time OMP_NUM_THREADS=1 mpirun -np $Q ./hpcc
     cp hpccoutf.txt $OutputDir/EmbParallel/EPout$Q.txt
     cp StarResults.txt $OutputDir/EmbParallel/EPresults$Q.txt
     Reset

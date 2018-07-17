@@ -190,10 +190,20 @@ HPCC_InputFileInit(HPCC_Params *params) {
     /*Pull # of Repetitions needed for STREAM*/
     line++;
     fgets(buf,nbuf,f);
-    
     n = ReadInts(buf, HPL_MAX_PARAM, params->STREAM_repetitions) + 1;
-    assert(n== params->STREAM_N);
-  
+    
+    assert(n == params->STREAM_N);
+
+    /*Pull User input for FFT*/
+    line++;
+    fgets(buf, nbuf, f);
+    params->FFT_Size= ReadInts(buf, HPL_MAX_PARAM, params->FFT_UserVector)+1;
+    
+    /*Pull # of Repetitions needed for FFT*/
+    line++;
+    fgets(buf, nbuf, f);
+    n = ReadInts(buf, HPL_MAX_PARAM, params->FFT_repetitions)+1;
+    
     ioErr = 0;
     ioEnd:
     if (f) fclose( f );
@@ -223,6 +233,14 @@ HPCC_InputFileInit(HPCC_Params *params) {
   MPI_Bcast( &params->DGEMM_N, 1, MPI_INT, 0 , comm);
   MPI_Bcast( &params->DGEMM_MatRep, params->DGEMM_N, MPI_INT, 0 , comm);
   MPI_Bcast( &params->DGEMM_MatSize, params->DGEMM_N, MPI_INT, 0 , comm);
+  
+
+  MPI_Bcast( &params->STREAM_N, 1 ,MPI_INT, 0 , comm);
+  MPI_Bcast( &params->STREAM_UserVector, params->STREAM_N, MPI_INT, 0 , comm);
+  MPI_Bcast( &params->STREAM_repetitions, params->STREAM_N, MPI_INT, 0 , comm);
+  
+  MPI_Bcast( &params->FFT_Size, 1, MPI_INT, 0, comm);
+  MPI_Bcast( &params->FFT_UserVector, params->FFT_Size ,MPI_INT, 0 , comm);
   
   /* copy what HPL has */
   params->PTRANSnpqs = params->npqs;
@@ -256,10 +274,11 @@ HPCC_Init(HPCC_Params *params) {
   int myRank, commSize;
   int i, nMax, nbMax, procCur, procMax, procMin, errCode;
   double totalMem;
-  char inFname[12] = "hpccinf.txt", outFname[13] = "hpccoutf.txt", ParallelResults[20] = "ParallelResults.txt", StarResults[16] = "StarResults.txt";
+  char inFname[12] = "hpccinf.txt", outFname[13] = "hpccoutf.txt", Results[12] = "Results.txt";
   FILE *outputFile;
-  FILE *ParallelRFile;
-  FILE *StarRFile;
+  
+  FILE *ResultsRFile;
+  
   MPI_Comm comm = MPI_COMM_WORLD;
   time_t currentTime;
   char hostname[MPI_MAX_PROCESSOR_NAME + 1]; int hostnameLen;
@@ -270,21 +289,21 @@ HPCC_Init(HPCC_Params *params) {
 
   outputFile = NULL;
   /*Added*/
-  ParallelRFile= NULL;
-  StarRFile= NULL;
+  
+  ResultsRFile = NULL;
+ 
   MPI_Comm_size( comm, &commSize );
   MPI_Comm_rank( comm, &myRank );
   strcpy( params->inFname, inFname );
   strcpy( params->outFname, outFname );
   /*ADDED*/
-  strcpy( params->ParallelResults, ParallelResults );
-  strcpy( params->StarResults, StarResults);
-  if (0 == myRank)
-    outputFile = fopen( params->outFname, "a" );
-    /*ADDED R results*/
-    ParallelRFile = fopen(params->ParallelResults, "w");
-    StarRFile = fopen(params->StarResults, "w");
+  strcpy( params->Results, Results );
 
+  if (0 == myRank){
+    outputFile = fopen( params->outFname, "a" );
+    /*ADDED results*/
+    ResultsRFile = fopen(params->Results, "a");
+  }
   errCode = 0;
   if (sizeof(u64Int) < 8 || sizeof(s64Int) < 8) errCode = 1;
   if (ErrorReduce( outputFile, "No 64-bit integer type available.", errCode, comm ))
@@ -293,6 +312,7 @@ HPCC_Init(HPCC_Params *params) {
   if (i) hostname[0] = 0;
   else hostname[Mmax(hostnameLen, MPI_MAX_PROCESSOR_NAME)] = 0;
   time( &currentTime );
+ 
   BEGIN_IO( myRank, params->outFname, outputFile );
   fprintf( outputFile,
             "########################################################################\n" );
@@ -319,8 +339,8 @@ HPCC_Init(HPCC_Params *params) {
   params->RunStarDGEMM = 1;
   params->RunParallelDGEMM = 1;
   params->RunPTRANS = 0;
-  params->RunStarStream = 0;
-  params->RunSingleStream = 0;
+  params->RunStarStream = 1;
+  params->RunSingleStream = 1;
   params->RunMPIRandomAccess_LCG = 0;
   params->RunStarRandomAccess_LCG = 0;
   params->RunSingleRandomAccess_LCG = 0;
@@ -330,7 +350,7 @@ HPCC_Init(HPCC_Params *params) {
   params->RunLatencyBandwidth = 0;
   params->RunMPIFFT = 0;
   params->RunStarFFT = 0;
-  // params->RunSingleFFT = 0;
+  params->RunSingleFFT = 0;
   // params->RunHPL = params->RunStarDGEMM = params->RunSingleDGEMM =
   // params->RunPTRANS = params->RunStarStream = params->RunSingleStream =
   // params->RunMPIRandomAccess_LCG = params->RunStarRandomAccess_LCG = params->RunSingleRandomAccess_LCG =

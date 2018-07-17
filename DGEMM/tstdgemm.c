@@ -380,13 +380,9 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
   if (doIO) {
     outFile = fopen(params->outFname, "a" );
     /*Added*/
-    if (ResultFile==0){
-      Rfile = fopen(params->StarResults, "a");
-    }
-    else{
-      Rfile = fopen(params->ParallelResults, "a");
-    }
 
+    Rfile = fopen(params->Results, "a");
+    
     if (! outFile ) {
       outFile = stderr;
       fprintf(outFile, "Cannot open output file.\n" );
@@ -398,9 +394,8 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
       fprintf(Rfile, "Cannot output file.\n");
       return 1;
     }
-  }
-  if(doIO) fprintf(Rfile,"%s", "N,RunID,GFLOPS\n");
 
+  }
   /*
   *
   * AUTHOR= OHAD KATZ
@@ -435,11 +430,17 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
     for (int repnum = 0 ; repnum < repetitions; repnum++){
       /*Set n to fixed size array in Input File*/
       n = params->DGEMM_MatSize[i_matrix]; 
+     
       if (ParallelSwitch == 0) sres = HPCC_scaLAPACK_Calc(n, nbval, nprow, npcol, doIO, UGflops, Un, Ufailure, &Gflop);
       
       if (ParallelSwitch == 1) sres = HPCC_DGEMM_Calculation(n, doIO, UGflops, Un, Ufailure, &Gflop);
       
-      if (doIO) fprintf(Rfile,"%d,%d,%f\n", params->DGEMM_MatSize[i_matrix],repnum+1,Gflop);
+      if (doIO){
+        
+        if (ParallelSwitch == 0) fprintf(Rfile,"%s,%d,%d,%f\n","pdgemm",repnum+1,params->DGEMM_MatSize[i_matrix],Gflop);
+        else fprintf(Rfile,"%s,%d,%d,%f\n","dgemm",repnum+1,params->DGEMM_MatSize[i_matrix],Gflop);
+      }
+
       if (Gflop>max) max=Gflop;
       if (Gflop<min) min=Gflop;
       
@@ -495,9 +496,11 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
 	if (doIO) {
 	  fflush(outFile);
 	  fclose(outFile);
+    
     fflush(Rfile);
     fclose(Rfile);
-	}
+  
+  }
 
 	if (UGflops) *UGflops = Gflop;
 	if (Un) *Un = n;
