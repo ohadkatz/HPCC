@@ -164,7 +164,7 @@ int HPL_main( ARGC, ARGV, rdata, failure )
    HPL_pdinfo( &test, &ns, nval, &nbs, nbval, &pmapping, &npqs, pval, qval,
                &npfs, pfaval, &nbms, nbmval, &ndvs, ndvval, &nrfs, rfaval,
                &ntps, topval, &ndhs, ndhval, &fswap, &tswap, &L1notran,
-               &Unotran, &equil, &align, nsize,nrep);
+               &Unotran, &equil, &align);
 /*
  * Loop over different process grids - Define process grid. Go to bottom
  * of process grid loop if this case does not use my process.

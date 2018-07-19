@@ -22,7 +22,6 @@ HPCC_StarFFT(HPCC_Params *params) {
   MPI_Reduce( &rv, &errCount, 1, MPI_INT, MPI_SUM, 0, comm );
   MPI_Allreduce( &failure, &failureAll, 1, MPI_INT, MPI_MAX, comm );
   if (failureAll) params->Failure = 1;
-
   MPI_Reduce( &localGflops, &minGflops, 1, MPI_DOUBLE, MPI_MIN, 0, comm );
   MPI_Reduce( &localGflops, &avgGflops, 1, MPI_DOUBLE, MPI_SUM, 0, comm );
   MPI_Reduce( &localGflops, &maxGflops, 1, MPI_DOUBLE, MPI_MAX, 0, comm );

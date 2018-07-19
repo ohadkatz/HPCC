@@ -180,6 +180,7 @@ static double avgtime[4] = {0}, maxtime[4] = {0},
               mintime[4] = {FLT_MAX,FLT_MAX,FLT_MAX,FLT_MAX};
 
 static char *label[4] = {"Copy:      ", "Scale:     ", "Add:       ", "Triad:     "};
+static char *outputlabel[4] = {"STREAM Copy", "STREAM Scale", "STREAM Add", "STREAM Triad"};
 
 static double bytes[4] = {
     2 * sizeof(double),
@@ -486,7 +487,7 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
-        for (j=0; j<params->STREAM_N; j++) {
+        for (j=0; j<4; j++) {
           a[j] = 1.0;
           b[j] = 2.0;
           c[j] = 0.0;
@@ -634,7 +635,7 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
     MPI_Allreduce( times_copy, times, 4*repetitions, MPI_DOUBLE, MPI_MIN, comm );
     
     /* Back to the original code, but now using the minimum global timing across all ranks */
-    for (j=0; j<params->STREAM_N; j++)
+    for (j=0; j<4; j++)
     {
       avgtime[j] = 0.0;
       mintime[j] = times[j][1];
@@ -643,18 +644,21 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
     }
     for (k=1; k<repetitions; k++) /* note -- skip first iteration */
     {
-      for (j=0; j<params->STREAM_N; j++)
+      for (j=0; j<4; j++)
       {
         avgtime[j] = avgtime[j] + times[j][k];
         mintime[j] = Mmin(mintime[j], times[j][k]);
         maxtime[j] = Mmax(maxtime[j], times[j][k]);
-        
+        if(doIO)
+          fprintf(RFile,"%s,%d,%d,%f\n",outputlabel[j],k, params->STREAM_UserVector[i_vector],(avgtime[j]/(double)(repetitions-1)));
       }
+      
     }
     
     if (doIO)
       fprintf( outFile, "Function      Rate (GB/s)   Avg time     Min time     Max time\n");
-    for (j=0; j<params->STREAM_N; j++) {
+    
+    for (j=0; j<4; j++) {
       
       avgtime[j] /= (double)(repetitions - 1); /* note -- skip first iteration */
       
@@ -662,24 +666,19 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
       gbVector[i_vector] = (mintime[j] > 0.0 ? 1.0 / mintime[j] : -1.0);
 
       gbVector[i_vector] *= 1e-9 * bytes[j] * array_elements;
-      
       VectorAvg[i_vector]= avgtime[j];
       VectorMax[i_vector]= maxtime[j];
       VectorMin[i_vector]= mintime[j];
       
 
       if (doIO){
-        fprintf( outFile, "%s%11.4f  %11.4f  %11.4f  %11.4f\n", label[j],
+        fprintf( outFile, "%s%11.4f  %11.4f  %11.4f  %11.4f\n", 
+                label[j],
                 gbVector[i_vector],
-                // avgtime[j],
-                // maxtime[j],
-                // mintime[j]);
                 VectorAvg[i_vector],
                 VectorMin[i_vector],
                 VectorMax[i_vector]);
-        for(int k =0 ; k < repetitions; k++){
-          fprintf(RFile,"%s,%d,%d,%f\n","STREAM",k+1, params->STREAM_UserVector[i_vector], gbVector[i_vector]);
-        }
+      
       }
 
       switch (j) {
@@ -687,9 +686,9 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
         case 1: *scaleGBs = gbVector[i_vector]; break;
         case 2: *addGBs = gbVector[i_vector]; break;
         case 3: *triadGBs = gbVector[i_vector]; break;
-        }
       }
-    
+    }
+  
     if (doIO)
       fprintf( outFile, HLINE);
 
@@ -722,11 +721,11 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
 void tuned_STREAM_Copy()
 {
   int j;
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
-        for (j=0; j<array_elements; j++)
-            c[j] = a[j];
+  #ifdef _OPENMP
+  #pragma omp parallel for
+  #endif
+  for (j=0; j<array_elements; j++)
+      c[j] = a[j];
 }
 
 void tuned_STREAM_Scale(double scalar)
