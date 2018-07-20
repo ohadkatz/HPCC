@@ -558,67 +558,79 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
 
    
     scalar = SCALAR;
+    double repetitions_inner;
     for (k=0; k < repetitions; k++) {
-
-        /* kernel 1: Copy */
+      /* kernel 1: Copy */
+      MPI_Barrier( comm );
+      repetitions_inner=1;
+      if (array_elements < 2048)
+        repetitions_inner=repetitions;
+      times[0][k] = MPI_Wtime();
+      for(int i=0; i< repetitions_inner; i++){
+        #ifdef TUNED
+        tuned_STREAM_Copy();
+        #else
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif
+        for (j=0; j<array_elements; j++)
+          c[j] = a[j];
+        #endif
         MPI_Barrier( comm );
-        times[0][k] = MPI_Wtime();
-    #ifdef TUNED
-            tuned_STREAM_Copy();
-    #else
-    #ifdef _OPENMP
-    #pragma omp parallel for
-    #endif
-            for (j=0; j<array_elements; j++)
-              c[j] = a[j];
-    #endif
-            MPI_Barrier( comm );
-            times[0][k] = MPI_Wtime() - times[0][k];
+      }
+      times[0][k] = ((MPI_Wtime() - times[0][k])/repetitions_inner);
 
-            /* kernel 2: Scale */
-            MPI_Barrier( comm );
-            times[1][k] = MPI_Wtime();
-    #ifdef TUNED
-            tuned_STREAM_Scale(scalar);
-    #else
-    #ifdef _OPENMP
-    #pragma omp parallel for
-    #endif
-            for (j=0; j<array_elements; j++)
-              b[j] = scalar*c[j];
-    #endif
-            MPI_Barrier( comm );
-            times[1][k] = MPI_Wtime() - times[1][k];
+      /* kernel 2: Scale */
+      MPI_Barrier( comm );
+      times[1][k] = MPI_Wtime();
+      for(int i=0; i< repetitions_inner; i++){
+        
+        #ifdef TUNED
+        tuned_STREAM_Scale(scalar);
+        #else
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif
+        for (j=0; j<array_elements; j++)
+          b[j] = scalar*c[j];
+        #endif
+        MPI_Barrier( comm );
+      }
+      times[1][k] =((MPI_Wtime() - times[1][k])/repetitions_inner);
+    
+      /* kernel 3: Add */
+      MPI_Barrier( comm );
+      times[2][k] = MPI_Wtime();
+      for(int i=0; i< repetitions_inner; i++){
+        #ifdef TUNED
+        tuned_STREAM_Add();
+        #else
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif
+        for (j=0; j < array_elements; j++)
+          c[j] = a[j]+b[j];
+        #endif
+        MPI_Barrier( comm );
+      }
+      times[2][k] = ((MPI_Wtime() - times[2][k])/repetitions_inner);
 
-            /* kernel 3: Add */
-            MPI_Barrier( comm );
-            times[2][k] = MPI_Wtime();
-    #ifdef TUNED
-            tuned_STREAM_Add();
-    #else
-    #ifdef _OPENMP
-    #pragma omp parallel for
-    #endif
-            for (j=0; j < array_elements; j++)
-              c[j] = a[j]+b[j];
-    #endif
-            MPI_Barrier( comm );
-            times[2][k] = MPI_Wtime() - times[2][k];
-
-            /* kernel 4: Triad */
-            MPI_Barrier( comm );
-            times[3][k] = MPI_Wtime();
-    #ifdef TUNED
-            tuned_STREAM_Triad(scalar);
-    #else
-    #ifdef _OPENMP
-    #pragma omp parallel for
-    #endif
-            for (j=0; j<array_elements; j++)
-              a[j] = b[j]+scalar*c[j];
-    #endif
-            MPI_Barrier( comm );
-            times[3][k] = MPI_Wtime() - times[3][k];
+      /* kernel 4: Triad */
+      MPI_Barrier( comm );
+      times[3][k] = MPI_Wtime();
+      for(int i=0; i< repetitions_inner; i++){
+        #ifdef TUNED
+        tuned_STREAM_Triad(scalar);
+        #else
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif
+        for (j=0; j<array_elements; j++)
+        a[j] = b[j]+scalar*c[j];
+        #endif
+        MPI_Barrier( comm );
+      }
+      times[3][k] = ((MPI_Wtime() - times[3][k])/repetitions_inner);
     }
     
     t0 = MPI_Wtime();
@@ -649,10 +661,11 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
         avgtime[j] = avgtime[j] + times[j][k];
         mintime[j] = Mmin(mintime[j], times[j][k]);
         maxtime[j] = Mmax(maxtime[j], times[j][k]);
-        if(doIO)
-          fprintf(RFile,"%s,%d,%d,%f\n",outputlabel[j],k, params->STREAM_UserVector[i_vector],(avgtime[j]/(double)(repetitions-1)));
+        gbVector[j] = (mintime[j] > 0.0 ? 1.0 / mintime[j] : -1.0); 
+        gbVector[j] *= 1e-9 * bytes[j] * array_elements;
+        fprintf(RFile,"%s,%d,%d,%f\n",outputlabel[j], k, params->STREAM_UserVector[i_vector], gbVector[j]);
+        
       }
-      
     }
     
     if (doIO)
@@ -661,31 +674,31 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
     for (j=0; j<4; j++) {
       
       avgtime[j] /= (double)(repetitions - 1); /* note -- skip first iteration */
-      
       /* make sure no division by zero */
-      gbVector[i_vector] = (mintime[j] > 0.0 ? 1.0 / mintime[j] : -1.0);
+      gbVector[j] = (mintime[j] > 0.0 ? 1.0 / mintime[j] : -1.0);
 
-      gbVector[i_vector] *= 1e-9 * bytes[j] * array_elements;
-      VectorAvg[i_vector]= avgtime[j];
-      VectorMax[i_vector]= maxtime[j];
-      VectorMin[i_vector]= mintime[j];
+      gbVector[j] *= 1e-9 * bytes[j] * array_elements;
+      VectorAvg[j]= avgtime[j];
+      VectorMax[j]= maxtime[j];
+      VectorMin[j]= mintime[j];
       
 
+        
       if (doIO){
         fprintf( outFile, "%s%11.4f  %11.4f  %11.4f  %11.4f\n", 
                 label[j],
-                gbVector[i_vector],
-                VectorAvg[i_vector],
-                VectorMin[i_vector],
-                VectorMax[i_vector]);
-      
+                gbVector[j],
+                VectorAvg[j],
+                VectorMin[j],
+                VectorMax[j]);
+        
       }
 
       switch (j) {
-        case 0: *copyGBs = gbVector[i_vector]; break;
-        case 1: *scaleGBs = gbVector[i_vector]; break;
-        case 2: *addGBs = gbVector[i_vector]; break;
-        case 3: *triadGBs = gbVector[i_vector]; break;
+        case 0: *copyGBs = gbVector[j]; break;
+        case 1: *scaleGBs = gbVector[j]; break;
+        case 2: *addGBs = gbVector[j]; break;
+        case 3: *triadGBs = gbVector[j]; break;
       }
     }
   
