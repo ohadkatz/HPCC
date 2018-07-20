@@ -436,7 +436,6 @@ HPCC_TestDGEMM(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufa
       if (ParallelSwitch == 1) sres = HPCC_DGEMM_Calculation(n, doIO, UGflops, Un, Ufailure, &Gflop);
       
       if (doIO){
-        
         if (ParallelSwitch == 0) fprintf(Rfile,"%s,%d,%d,%f\n","pdgemm",repnum+1,params->DGEMM_MatSize[i_matrix],Gflop);
         else fprintf(Rfile,"%s,%d,%d,%f\n","dgemm",repnum+1,params->DGEMM_MatSize[i_matrix],Gflop);
       }
