@@ -16,7 +16,7 @@ TestFFT1(HPCC_Params *params, int doIO, FILE *outFile, FILE *Rfile, double *UGfl
   int i, n, flags, failure = 1;
   double deps = HPL_dlamch( HPL_MACH_EPS );
   int inner_rep= (VecSize > 2000) ? 1 : Repetitions;
-
+  inner_rep=1;
   //if(VecSize<5000) inner_rep=Repetitions;
 #ifdef HPCC_FFT_235
   int f[3];
@@ -50,58 +50,48 @@ TestFFT1(HPCC_Params *params, int doIO, FILE *outFile, FILE *Rfile, double *UGfl
     c_re( in[i] ) = c_im( out[i] ) = 0.0;
   }
 #endif
-for (int i=0 ; i < Repetitions; i++){
   t0 = -MPI_Wtime();
-  for(int i_rep=0; i_rep<inner_rep;i_rep++){
+  for (int i=0 ; i < Repetitions; i++){
     HPCC_bcnrand( 2*n, 0, in );
+    if (doIO) fprintf(Rfile,"%s,%d,%d,%f\n","FFT* Gen. Time",i+1,VecSize, t0+MPI_Wtime());
   }
   t0 += MPI_Wtime();
-  
-  if (doIO) fprintf(Rfile,"%s,%d,%d,%f\n","FFT* Gen. Time",i+1,VecSize, t0);
-  
-}
+
 #ifdef HPCC_FFTW_ESTIMATE
   flags = FFTW_ESTIMATE;
 #else
   flags = FFTW_MEASURE;
 #endif
-for (int i=0 ; i < Repetitions; i++){
   t1 = -MPI_Wtime();
-  for(int i_rep=0; i_rep<inner_rep;i_rep++){
+  for (int i=0 ; i < Repetitions; i++){
     p = fftw_create_plan( n, FFTW_FORWARD, flags );
+    if(doIO) fprintf(Rfile,"%s,%d,%d,%f\n","FFT* Tuning",i+1,VecSize, t1);
   }
   t1 += MPI_Wtime();
 
-  if(doIO) fprintf(Rfile,"%s,%d,%d,%f\n","FFT* Tuning",i+1,VecSize, t1);
-  
-}
   if (! p) goto comp_end;
-for (int i=0 ; i < Repetitions; i++){
+
   t2 = -MPI_Wtime();
-  for(int i_rep=0; i_rep<inner_rep;i_rep++){
+  for (int i=0 ; i < Repetitions; i++){
     fftw_one( p, in, out );
+    if(doIO) fprintf(Rfile,"%s,%d,%d,%f\n","FFT* Computing",i+1,VecSize, t2+MPI_Wtime());
   }
+
   t2 += MPI_Wtime();
-  if (t2 > 0.0) Gflops = 1e-9 * (5.0 * n * log(n) / log(2.0)) / t2;
-  if(doIO) fprintf(Rfile,"%s,%d,%d,%f\n","FFT* Computing",i+1,VecSize, t2);
-  
-}
-  //fprintf(Rfile,"%s,%d,%d,%f\n","FFT* Computing",i+1,VecSize, t2);
- //fftw_destroy_plan(p);
 
+  //  fftw_destroy_plan(p);
   ip = HPCC_fftw_create_plan( n, FFTW_BACKWARD, FFTW_ESTIMATE );
-
   if (ip) {
-    for (int i=0 ; i < Repetitions; i++){
-      t3 = -MPI_Wtime();
-      for(int i_rep=0; i_rep<inner_rep;i_rep++){
-      HPCC_fftw_one( ip, out, in );
-      }
-      t3 += MPI_Wtime();
 
-      if (doIO) fprintf(Rfile,"%s,%d,%d,%f\n","FFT* Inverse", i+1, VecSize, t3);
-    }
-    HPCC_fftw_destroy_plan( ip );
+  t3 = -MPI_Wtime();
+  for (int i=0 ; i < Repetitions; i++){
+    
+    HPCC_fftw_one( ip, out, in );
+    
+    if (doIO) fprintf(Rfile,"%s,%d,%d,%f\n","FFT* Inverse", i+1, VecSize, t3+MPI_Wtime());
+  }
+  t3 += MPI_Wtime();
+  HPCC_fftw_destroy_plan( ip );
   }
 
   HPCC_bcnrand( 2*(s64Int)n, 0, out ); /* regenerate data */
@@ -132,7 +122,7 @@ for (int i=0 ; i < Repetitions; i++){
   }
 
   if (t2 > 0.0) Gflops = 1e-9 * (5.0 * n * log(n) / log(2.0)) / t2;
-  fprintf(Rfile,"%s,%d,%d,%f\n","FFT* Gflops",Repetitions,VecSize, Gflops);
+  if(doIO) fprintf(Rfile,"%s,%d,%d,%f\n","FFT* Gflops",Repetitions,VecSize, Gflops);
 
   comp_end:
 
