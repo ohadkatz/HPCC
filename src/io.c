@@ -203,7 +203,7 @@ HPCC_InputFileInit(HPCC_Params *params) {
     line++;
     fgets(buf, nbuf, f);
     n = ReadInts(buf, HPL_MAX_PARAM, params->FFT_repetitions)+1;
-    
+    assert(n == params->FFT_Size);
     ioErr = 0;
     ioEnd:
     if (f) fclose( f );
@@ -240,8 +240,9 @@ HPCC_InputFileInit(HPCC_Params *params) {
   MPI_Bcast( &params->STREAM_repetitions, params->STREAM_N, MPI_INT, 0 , comm);
   
   MPI_Bcast( &params->FFT_Size, 1, MPI_INT, 0, comm);
-  MPI_Bcast( &params->FFT_UserVector, params->FFT_Size ,MPI_INT, 0 , comm);
-  
+  MPI_Bcast( &params->FFT_UserVector, params->FFT_Size, MPI_INT, 0 , comm);
+  MPI_Bcast( &params->FFT_repetitions, params->FFT_Size, MPI_INT, 0 , comm);
+
   /* copy what HPL has */
   params->PTRANSnpqs = params->npqs;
   icopy( params->npqs, params->qval, 1, params->PTRANSqval, 1 );
@@ -348,9 +349,9 @@ HPCC_Init(HPCC_Params *params) {
   params->RunStarRandomAccess = 0;
   params->RunSingleRandomAccess = 0;
   params->RunLatencyBandwidth = 0;
-  params->RunMPIFFT = 0;
+  params->RunMPIFFT = 1;
   params->RunStarFFT = 1;
-  params->RunSingleFFT = 1;
+  params->RunSingleFFT = 0;
   // params->RunHPL = params->RunStarDGEMM = params->RunSingleDGEMM =
   // params->RunPTRANS = params->RunStarStream = params->RunSingleStream =
   // params->RunMPIRandomAccess_LCG = params->RunStarRandomAccess_LCG = params->RunSingleRandomAccess_LCG =

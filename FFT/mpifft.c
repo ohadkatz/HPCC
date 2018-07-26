@@ -10,8 +10,8 @@
 double *HPCC_fft_timings_forward, *HPCC_fft_timings_backward;
 
 static void
-MPIFFT0(HPCC_Params *params, int doIO, FILE *outFile, MPI_Comm comm, int locN,
-        double *UGflops, s64Int_t *Un, double *UmaxErr, int *Ufailure) {
+MPIFFT0(HPCC_Params *params, int doIO, FILE *outFile, FILE *Rfile, MPI_Comm comm, int locN,
+        double *UGflops, s64Int_t *Un, double *UmaxErr, int *Ufailure, int VecSize, int Repetitions) {
   int commRank, commSize, failure, flags;
   s64Int_t i, n;
   s64Int_t locn, loc0, alocn, aloc0, tls;
@@ -32,13 +32,14 @@ MPIFFT0(HPCC_Params *params, int doIO, FILE *outFile, MPI_Comm comm, int locN,
 
   MPI_Comm_size( comm, &commSize );
   MPI_Comm_rank( comm, &commRank );
-for(int i_vec=0; i_vec<params->FFT_Size; i++){
-  n = params->FFT_UserVector[i_vec];
 
+  n = locN;
+  int inner_rep= (VecSize > 2000) ? 1 : Repetitions;
+  printf("%d\n", inner_rep);
   /* number of processes have been factored out - need to put it back in */
-  n *= commSize;
+  //n *= commSize;
 
-  n *= commSize; /* global vector size */
+  //n *= commSize; /* global vector size */
 
 #ifdef USING_FFTW
   /* FFTW ver. 2 only supports vector sizes that fit in 'int' */
@@ -58,11 +59,13 @@ for(int i_vec=0; i_vec<params->FFT_Size; i++){
 #else
   flags = FFTW_MEASURE;
 #endif
-
+//for(int i = 0; i < Repetitions; i++){
   t1 = -MPI_Wtime();
-  p = fftw_mpi_create_plan( comm, n, FFTW_FORWARD, flags );
+  for(int i_rep=0; i_rep<inner_rep; i_rep++){
+    p = fftw_mpi_create_plan( comm, n, FFTW_FORWARD, flags );
+  }
   t1 += MPI_Wtime();
-
+//}
   if (! p) goto no_plan;
 
 #ifdef USING_FFTW
@@ -82,10 +85,10 @@ for(int i_vec=0; i_vec<params->FFT_Size; i++){
   sAbort = 0;
   if (! inout || ! work) sAbort = 1;
   MPI_Allreduce( &sAbort, &rAbort, 1, MPI_INT, MPI_SUM, comm );
-  // if (rAbort > 0) {
-  //   fftw_mpi_destroy_plan( p );
-  //   goto comp_end;
-  // }
+  if (rAbort > 0) {
+    fftw_mpi_destroy_plan( p );
+    goto comp_end;
+  }
 
   /* Make sure that `inout' and `work' are initialized in parallel if using
      Open MP: this will ensure better placement of pages if first-touch policy
@@ -97,22 +100,31 @@ for(int i_vec=0; i_vec<params->FFT_Size; i++){
     c_re( inout[i] ) = c_im( work[i] ) = 0.0;
   }
 #endif
-
+//for(int i = 0 ; i < Repetitions ; i++){
   t0 = -MPI_Wtime();
-  HPCC_bcnrand( 2 * tls, 53 * commRank * 2 * tls, inout );
+  for(int i_rep=0; i_rep<inner_rep; i_rep++){
+
+    HPCC_bcnrand( 2 * tls, 53 * commRank * 2 * tls, inout );
+  }
   t0 += MPI_Wtime();
+  if(doIO) fprintf(Rfile,"%s,%d,%d,%f\n","MPIFFT* Gen. Time",Repetitions,VecSize, t0);
+//}
 
   t2 = -MPI_Wtime();
-  fftw_mpi( p, 1, inout, work );
+  for(int i_rep=0; i_rep<Repetitions; i_rep++){
+    fftw_mpi( p, 1, inout, work );
+  }
   t2 += MPI_Wtime();
 
-  fftw_mpi_destroy_plan( p );
+  //fftw_mpi_destroy_plan( p );
 
   ip = HPCC_fftw_mpi_create_plan( comm, n, FFTW_BACKWARD, FFTW_ESTIMATE );
 
   if (ip) {
     t3 = -MPI_Wtime();
-    HPCC_fftw_mpi( ip, 1, inout, work );
+    for(int i_rep=0; i_rep<Repetitions; i_rep++){
+        HPCC_fftw_mpi( ip, 1, inout, work );
+    }
     t3 += MPI_Wtime();
 
     HPCC_fftw_mpi_destroy_plan( ip );
@@ -121,13 +133,12 @@ for(int i_vec=0; i_vec<params->FFT_Size; i++){
   HPCC_bcnrand( 2 * tls, 53 * commRank * 2 * tls, work ); /* regenerate data */
 
   maxErr = 0.0;
-  for (i = 0; i < n; ++i) {
+  for (i = 0; i < locn; ++i) {
     tmp1 = c_re( inout[i] ) - c_re( work[i] );
     tmp2 = c_im( inout[i] ) - c_im( work[i] );
     tmp3 = sqrt( tmp1*tmp1 + tmp2*tmp2 );
     maxErr = maxErr >= tmp3 ? maxErr : tmp3;
   }
-  
   MPI_Allreduce( &maxErr, UmaxErr, 1, MPI_DOUBLE, MPI_MAX, comm );
   maxErr = *UmaxErr;
   if (maxErr / log(n) / deps < params->test.thrsh) failure = 0;
@@ -135,17 +146,24 @@ for(int i_vec=0; i_vec<params->FFT_Size; i++){
   if (t2 > 0.0) Gflops = 1e-9 * (5.0 * n * log(n) / log(2.0)) / t2;
   
   if (doIO) {
-    fprintf( outFile, "Number of nodes: %d\n", commSize );
-    fprintf( outFile, "Vector size: %20.0f\n", tmp1 = (double)n );
+    fprintf( outFile, "\nNumber of nodes: %d\n", commSize );
+    fprintf( outFile, "Vector size: %9.3d\n", n );
+    fprintf( outFile, "Repetitions: %d\n", Repetitions);
     fprintf( outFile, "Generation time: %9.3f\n", t0 );
     fprintf( outFile, "Tuning: %9.3f\n", t1 );
     fprintf( outFile, "Computing: %9.3f\n", t2 );
     fprintf( outFile, "Inverse FFT: %9.3f\n", t3 );
     fprintf( outFile, "max(|x-x0|): %9.3e\n", maxErr );
     fprintf( outFile, "Gflop/s: %9.3f\n", Gflops );
+    fprintf(Rfile,"%s,%d,%d,%f\n","MPIFFT* GFLOP",Repetitions,VecSize, Gflops);
+    fprintf(Rfile,"%s,%d,%d,%f\n","MPIFFT* Gen. Time",Repetitions,VecSize, t0);
+    fprintf(Rfile,"%s,%d,%d,%f\n","MPIFFT* Tuning",Repetitions,VecSize, t1);
+    fprintf(Rfile,"%s,%d,%d,%f\n","MPIFFT* Computing",Repetitions,VecSize, t2);
+    fprintf(Rfile,"%s,%d,%d,%f\n","MPIFFT* Inverse",Repetitions,VecSize, t3);
+    
   }
-  }
-  //comp_end:
+
+  comp_end:
 
   if (work) HPCC_fftw_free( work );
   if (inout) HPCC_fftw_free( inout );
@@ -156,7 +174,6 @@ for(int i_vec=0; i_vec<params->FFT_Size; i++){
   *Un = n;
   *UmaxErr = maxErr;
   *Ufailure = failure;
- 
 }
 
 int
@@ -167,7 +184,9 @@ HPCC_MPIFFT(HPCC_Params *params) {
   double Gflops = -1.0, maxErr = -1.0;
   MPI_Comm comm;
   FILE *outFile;
-
+  FILE *Rfile;
+  int Repetitions = 0;
+  int VecSize = 0;
   MPI_Comm_size( MPI_COMM_WORLD, &commSize );
   MPI_Comm_rank( MPI_COMM_WORLD, &commRank );
 
@@ -175,7 +194,9 @@ HPCC_MPIFFT(HPCC_Params *params) {
 
   if (doIO) {
     outFile = fopen( params->outFname, "a" );
+    Rfile = fopen( params->Results, "a" );
     if (! outFile) outFile = stderr;
+    if (! Rfile) Rfile = stderr;
   }
 
   /*
@@ -188,7 +209,9 @@ HPCC_MPIFFT(HPCC_Params *params) {
   at least twice as many 2 factors as the process count, twice as many
   3 factors and twice as many 5 factors.
   */
-
+for(int i_vec=0; i_vec<params->FFT_Size;i_vec++){
+  VecSize = params->FFT_UserVector[i_vec];
+  Repetitions = params->FFT_repetitions[i_vec];
 #ifdef HPCC_FFT_235
   locN = 0; procCnt = commSize + 1;
   do {
@@ -200,7 +223,7 @@ HPCC_MPIFFT(HPCC_Params *params) {
       ; /* EMPTY */
 
     /* Make sure the local vector size is greater than 0 */
-    locN = HPCC_LocalVectorSize( params, 4*procCnt, sizeof(fftw_complex), 0 );
+    locN = params->FFT_UserVector[i_vec];
     for ( ; locN >= 1 && HPCC_factor235( locN, f ); locN--)
       ; /* EMPTY */
   } while (locN < 1);
@@ -211,7 +234,7 @@ HPCC_MPIFFT(HPCC_Params *params) {
 
   /* Make sure the local vector size is greater than 0 */
   while (1) {
-    locN = HPCC_LocalVectorSize( params, 4*procCnt, sizeof(fftw_complex), 1 );
+    locN = params->FFT_UserVector[i_vec];
     if (locN) break;
     procCnt >>= 1;
   }
@@ -228,7 +251,7 @@ HPCC_MPIFFT(HPCC_Params *params) {
     MPI_Comm_split( MPI_COMM_WORLD, isComputing ? 0 : MPI_UNDEFINED, commRank, &comm );
 
   if (isComputing)
-    MPIFFT0( params, doIO, outFile, comm, locN, &Gflops, &n, &maxErr, &failure );
+    MPIFFT0( params, doIO, outFile, Rfile, comm, locN, &Gflops, &n, &maxErr, &failure, VecSize, Repetitions );
 
   if (commSize != procCnt && isComputing && comm != MPI_COMM_NULL)
     MPI_Comm_free( &comm );
@@ -247,8 +270,8 @@ HPCC_MPIFFT(HPCC_Params *params) {
 
   if (failure)
     params->Failure = 1;
-
+}
   if (doIO) if (outFile != stderr) fclose( outFile );
-
+  if (doIO) if (Rfile != stderr) fclose( Rfile );
   return 0;
 }

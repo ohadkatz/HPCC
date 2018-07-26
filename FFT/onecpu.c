@@ -27,7 +27,8 @@ HPCC_StarFFT(HPCC_Params *params) {
   MPI_Reduce( &localGflops, &maxGflops, 1, MPI_DOUBLE, MPI_MAX, 0, comm );
   avgGflops /= commSize;
 
-  MPI_Bcast( &avgGflops, 1, MPI_DOUBLE, 0, comm ); params->StarFFTGflops = avgGflops;
+  MPI_Bcast( &avgGflops, 1, MPI_DOUBLE, 0, comm ); 
+  params->StarFFTGflops = avgGflops;
 
   BEGIN_IO( commRank, params->outFname, outputFile);
   fprintf( outputFile, "Node(s) with error %d\n", errCount );
