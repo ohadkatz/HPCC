@@ -7,125 +7,142 @@
 #include "hpccfft.h"
 
 static int
-TestFFT1(HPCC_Params *params, int doIO, FILE *outFile, double *UGflops, int *Un, int *Ufailure) {
+TestFFT1(HPCC_Params *params, int doIO, FILE *outFile, FILE *Rfile, double *UGflops, int *Un, int *Ufailure, int VecSize, int Repetitions) {
   fftw_complex *in, *out;
   fftw_plan p;
   hpcc_fftw_plan ip;
-  double *VecValues=NULL;
   double Gflops = -1.0;
   double maxErr, tmp1, tmp2, tmp3, t0, t1, t2, t3;
   int i, n, flags, failure = 1;
   double deps = HPL_dlamch( HPL_MACH_EPS );
-  int repetitions= 1; 
-  
-  for( int i_vec = 0; i_vec<params->FFT_Size; ++i){
-    
-    repetitions= params->FFT_repetitions[i_vec];
-    #ifdef HPCC_FFT_235
-    int f[3]=NULL;
+  int inner_rep= (VecSize > 2000) ? 1 : Repetitions;
 
-    /* Need 2 vectors for input and output and 1 vector of scratch spaces */
-    // n = HPCC_LocalVectorSize( params, 3, params->FFT_UserVector[i_vec], 0 );
-    n = params->FFT_UserVector[i_vec];
-    // /* Adjust local size for factors */
-    // // for ( ; HPCC_factor235( n, f ); n--)
-    // // ; /* EMPTY */
-    // #else
-    // /* Need 2 vectors and vectors' sizes as power of 2 */
-    // //n = params->FFT_N;;
-    // n = params->FFT_UserVector[i_vec];
-    // n = HPCC_LocalVectorSize( params, 2, params->FFT_UserVector[0], 0 );
-    #endif
+  //if(VecSize<5000) inner_rep=Repetitions;
+#ifdef HPCC_FFT_235
+  int f[3];
 
-    /* need to use fftw_malloc() so that the returned pointers will be aligned properly for SSE
-      instructions on Intel/AMD systems */
-    in  = (fftw_complex *)HPCC_fftw_malloc( (sizeof *in)  * n );
-    out = (fftw_complex *)HPCC_fftw_malloc( (sizeof *out) * n );
+  /* Need 2 vectors for input and output and 1 vector of scratch spaces */
+  n = VecSize;
 
-    if (! in || ! out) goto comp_end;
+  /* Adjust local size for factors */
+  for ( ; HPCC_factor235( n, f ); n--)
+    ; /* EMPTY */
+#else
+  /* Need 2 vectors and vectors' sizes as power of 2 */
+  n = VecSize;
+#endif
+
+  /* need to use fftw_malloc() so that the returned pointers will be aligned properly for SSE
+     instructions on Intel/AMD systems */
+  in  = (fftw_complex *)HPCC_fftw_malloc( (sizeof *in)  * n );
+  out = (fftw_complex *)HPCC_fftw_malloc( (sizeof *out) * n );
+
+  if (! in || ! out) goto comp_end;
 
   /* Make sure that `inout' and `work' are initialized in parallel if using
      Open MP: this will ensure better placement of pages if first-touch policy
      is used by a distrubuted shared memory machine. */
-    #ifdef _OPENMP
-    #pragma omp parallel for
-    for (i = 0; i < n; ++i) {
-      c_re( in[i] ) = c_re( out[i] ) = 0.0;
-      c_re( in[i] ) = c_im( out[i] ) = 0.0;
-    }
-    #endif
+#ifdef _OPENMP
+#pragma omp parallel for
+  
+  for (i = 0; i < n; ++i) {
+    c_re( in[i] ) = c_re( out[i] ) = 0.0;
+    c_re( in[i] ) = c_im( out[i] ) = 0.0;
+  }
+#endif
+for (int i=0 ; i < Repetitions; i++){
+  t0 = -MPI_Wtime();
+  for(int i_rep=0; i_rep<inner_rep;i_rep++){
+    HPCC_bcnrand( 2*n, 0, in );
+  }
+  t0 += MPI_Wtime();
+  
+  if (doIO) fprintf(Rfile,"%s,%d,%d,%f\n","FFT* Gen. Time",i+1,VecSize, t0);
+  
+}
+#ifdef HPCC_FFTW_ESTIMATE
+  flags = FFTW_ESTIMATE;
+#else
+  flags = FFTW_MEASURE;
+#endif
+for (int i=0 ; i < Repetitions; i++){
+  t1 = -MPI_Wtime();
+  for(int i_rep=0; i_rep<inner_rep;i_rep++){
+    p = fftw_create_plan( n, FFTW_FORWARD, flags );
+  }
+  t1 += MPI_Wtime();
 
-    t0 = -MPI_Wtime();
-    for(int i=0 ; i < repetitions; i++){
-      HPCC_bcnrand( 2*n, 0, in );
-    }
-    t0 += MPI_Wtime();
+  if(doIO) fprintf(Rfile,"%s,%d,%d,%f\n","FFT* Tuning",i+1,VecSize, t1);
+  
+}
+  if (! p) goto comp_end;
+for (int i=0 ; i < Repetitions; i++){
+  t2 = -MPI_Wtime();
+  for(int i_rep=0; i_rep<inner_rep;i_rep++){
+    fftw_one( p, in, out );
+  }
+  t2 += MPI_Wtime();
+  if (t2 > 0.0) Gflops = 1e-9 * (5.0 * n * log(n) / log(2.0)) / t2;
+  if(doIO) fprintf(Rfile,"%s,%d,%d,%f\n","FFT* Computing",i+1,VecSize, t2);
+  
+}
+  //fprintf(Rfile,"%s,%d,%d,%f\n","FFT* Computing",i+1,VecSize, t2);
+ //fftw_destroy_plan(p);
 
-    #ifdef HPCC_FFTW_ESTIMATE
-      flags = FFTW_ESTIMATE;
-    #else
-      flags = FFTW_MEASURE;
-    #endif
+  ip = HPCC_fftw_create_plan( n, FFTW_BACKWARD, FFTW_ESTIMATE );
 
-    t1 = -MPI_Wtime();
-    for(int i = 0; i < repetitions; i++){
-      p = fftw_create_plan( n, FFTW_FORWARD, flags );
-    }
-    t1 += MPI_Wtime();
-
-    if (! p) goto comp_end;
-
-    t2 = -MPI_Wtime();
-    for(int i = 0; i < repetitions; i++){
-      fftw_one( p, in, out );
-    }
-    t2 += MPI_Wtime();
-
-    fftw_destroy_plan(p);
-
-    ip = HPCC_fftw_create_plan( n, FFTW_BACKWARD, FFTW_ESTIMATE );
-
-    if (ip) {
+  if (ip) {
+    for (int i=0 ; i < Repetitions; i++){
       t3 = -MPI_Wtime();
-      for(int i = 0; i < repetitions; i++){
-        HPCC_fftw_one( ip, out, in );
+      for(int i_rep=0; i_rep<inner_rep;i_rep++){
+      HPCC_fftw_one( ip, out, in );
       }
       t3 += MPI_Wtime();
-      printf("%f",t3)
-      HPCC_fftw_destroy_plan( ip );
+
+      if (doIO) fprintf(Rfile,"%s,%d,%d,%f\n","FFT* Inverse", i+1, VecSize, t3);
     }
-  
-    HPCC_bcnrand( 2*(s64Int)n, 0, out ); /* regenerate data */
-    maxErr = 0.0;
-    for (i = 0; i < n; i++) {
-      tmp1 = c_re( in[i] ) - c_re( out[i] );
-      tmp2 = c_im( in[i] ) - c_im( out[i] );
-      tmp3 = sqrt( tmp1*tmp1 + tmp2*tmp2 );
-      maxErr = maxErr >= tmp3 ? maxErr : tmp3;
-    }
-  
-    if (maxErr / log(n) / deps < params->test.thrsh) failure = 0;
-    
-    if (doIO) {
-      fprintf( outFile, "Vector size: %d\n", n );
-      fprintf( outFile, "Generation time: %9.3f\n", t0 );
-      fprintf( outFile, "Tuning: %9.3f\n", t1 );
-      fprintf( outFile, "Computing: %9.3f\n", t2 );
-      fprintf( outFile, "Inverse FFT: %9.3f\n", t3 );
-      fprintf( outFile, "max(|x-x0|): %9.3e\n", maxErr );
-    
-    if (t2 > 0.0) Gflops = 1e-9 * (5.0 * n * log(n) / log(2.0)) / t2;
-    }
+    HPCC_fftw_destroy_plan( ip );
   }
+
+  HPCC_bcnrand( 2*(s64Int)n, 0, out ); /* regenerate data */
+
+  maxErr = 0.0;
+  for (i = 0; i < n; i++) {
+    tmp1 = c_re( in[i] ) - c_re( out[i] );
+    tmp2 = c_im( in[i] ) - c_im( out[i] );
+    tmp3 = sqrt( tmp1*tmp1 + tmp2*tmp2 );
+    maxErr = maxErr >= tmp3 ? maxErr : tmp3;
+  }
+
+  if (maxErr / log(n) / deps < params->test.thrsh) failure = 0;
+
+  if (doIO) {
+    fprintf( outFile, "\nVector size: %d\n", n );
+    fprintf( outFile, "Repetitions: %d\n", Repetitions );
+    fprintf( outFile, "Generation time: %9.3f\n", t0 );
+    fprintf( outFile, "Tuning: %9.3f\n", t1 );
+    fprintf( outFile, "Computing: %9.3f\n", t2 );
+    fprintf( outFile, "Inverse FFT: %9.3f\n", t3 );
+    fprintf( outFile, "max(|x-x0|): %9.3e\n", maxErr );
+    // fprintf(Rfile,"%s,%d,%d,%f\n","FFT* Generation",Repetitions,VecSize, t0);
+    // fprintf(Rfile,"%s,%d,%d,%f\n","FFT* Tuning", Repetitions,VecSize, t1);
+    // fprintf(Rfile,"%s,%d,%d,%f\n","FFT* Computing",Repetitions,VecSize, t2);
+    // fprintf(Rfile,"%s,%d,%d,%f\n","FFT* Inverse", Repetitions,VecSize, t3);
+
+  }
+
+  if (t2 > 0.0) Gflops = 1e-9 * (5.0 * n * log(n) / log(2.0)) / t2;
+  fprintf(Rfile,"%s,%d,%d,%f\n","FFT* Gflops",Repetitions,VecSize, Gflops);
+
   comp_end:
-  
+
   if (out) HPCC_fftw_free( out );
   if (in)  HPCC_fftw_free( in );
-  
+
   *UGflops = Gflops;
   *Un = n;
   *Ufailure = failure;
-  
+
   return 0;
 }
 
@@ -134,12 +151,20 @@ HPCC_TestFFT(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufail
   int rv, n, failure = 1;
   double Gflops;
   FILE *outFile = NULL;
-
+  FILE *Rfile = NULL;
+  int UserVector=0;
+  int Repetitions=0;
   if (doIO) {
     outFile = fopen( params->outFname, "a" );
+    Rfile = fopen( params->Results , "a" );
     if (! outFile) {
       outFile = stderr;
       fprintf( outFile, "Cannot open output file.\n" );
+      return 1;
+    }
+    if(! Rfile) {
+      Rfile=stderr;
+      fprintf(Rfile, "Cannot output file.\n");
       return 1;
     }
   } else {
@@ -148,21 +173,26 @@ HPCC_TestFFT(HPCC_Params *params, int doIO, double *UGflops, int *Un, int *Ufail
       outFile = fopen( "nul", "w"); /* special filename on Windows, produces no output */
     }
   }
-
-  n = 0;
-  Gflops = -1.0;
-  rv = TestFFT1( params, doIO, outFile, &Gflops, &n, &failure );
-
-  if (doIO) {
-    fflush( outFile );
+  for(int i_vec=0; i_vec<params->FFT_Size;i_vec++){
+    n = 0;
+    Gflops = -1.0;
+    UserVector= params->FFT_UserVector[i_vec];
+    Repetitions= params->FFT_repetitions[i_vec];
+    
+    rv = TestFFT1( params, doIO, outFile, Rfile, &Gflops, &n, &failure, UserVector, Repetitions);
   }
+    if (doIO) {
+      fflush( outFile );
+      fflush( Rfile );
+    }
 
-  if (outFile)
-    fclose( outFile );
+    if (outFile)
+      fclose( outFile );
+    if (Rfile)
+      fclose( Rfile );
+    if (UGflops) *UGflops = Gflops;
+    if (Un) *Un = n;
+    if (Ufailure) *Ufailure = failure;
 
-  if (UGflops) *UGflops = Gflops;
-  if (Un) *Un = n;
-  if (Ufailure) *Ufailure = failure;
-
-  return rv;
+    return rv;
 }
