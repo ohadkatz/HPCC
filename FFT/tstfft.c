@@ -55,7 +55,7 @@ TestFFT1(HPCC_Params *params, int doIO, FILE *outFile, FILE *Rfile, double *UGfl
     HPCC_bcnrand( 2*n, 0, in );
     if (doIO) fprintf(Rfile,"%s,%d,%d,%f\n","FFT* Gen. Time",i+1,VecSize, t0+MPI_Wtime());
   }
-  t0 += MPI_Wtime();
+ t0 += MPI_Wtime();
 
 #ifdef HPCC_FFTW_ESTIMATE
   flags = FFTW_ESTIMATE;
@@ -65,7 +65,7 @@ TestFFT1(HPCC_Params *params, int doIO, FILE *outFile, FILE *Rfile, double *UGfl
   t1 = -MPI_Wtime();
   for (int i=0 ; i < Repetitions; i++){
     p = fftw_create_plan( n, FFTW_FORWARD, flags );
-    if(doIO) fprintf(Rfile,"%s,%d,%d,%f\n","FFT* Tuning",i+1,VecSize, t1);
+    if(doIO) fprintf(Rfile,"%s,%d,%d,%f\n","FFT* Tuning",i+1,VecSize, t1+MPI_Wtime());
   }
   t1 += MPI_Wtime();
 
@@ -75,6 +75,9 @@ TestFFT1(HPCC_Params *params, int doIO, FILE *outFile, FILE *Rfile, double *UGfl
   for (int i=0 ; i < Repetitions; i++){
     fftw_one( p, in, out );
     if(doIO) fprintf(Rfile,"%s,%d,%d,%f\n","FFT* Computing",i+1,VecSize, t2+MPI_Wtime());
+    if (t2+MPI_Wtime() > 0.0) Gflops = 1e-9 * (5.0 * n * log(n) / log(2.0)) / (t2+MPI_Wtime());
+    if(doIO) fprintf(Rfile,"%s,%d,%d,%f\n","FFT* Gflops",Repetitions,VecSize, Gflops);
+
   }
 
   t2 += MPI_Wtime();
@@ -105,7 +108,8 @@ TestFFT1(HPCC_Params *params, int doIO, FILE *outFile, FILE *Rfile, double *UGfl
   }
 
   if (maxErr / log(n) / deps < params->test.thrsh) failure = 0;
-
+  if (t2 > 0.0) Gflops = 1e-9 * (5.0 * n * log(n) / log(2.0)) / t2;
+ 
   if (doIO) {
     fprintf( outFile, "\nVector size: %d\n", n );
     fprintf( outFile, "Repetitions: %d\n", Repetitions );
@@ -114,15 +118,8 @@ TestFFT1(HPCC_Params *params, int doIO, FILE *outFile, FILE *Rfile, double *UGfl
     fprintf( outFile, "Computing: %9.3f\n", t2 );
     fprintf( outFile, "Inverse FFT: %9.3f\n", t3 );
     fprintf( outFile, "max(|x-x0|): %9.3e\n", maxErr );
-    // fprintf(Rfile,"%s,%d,%d,%f\n","FFT* Generation",Repetitions,VecSize, t0);
-    // fprintf(Rfile,"%s,%d,%d,%f\n","FFT* Tuning", Repetitions,VecSize, t1);
-    // fprintf(Rfile,"%s,%d,%d,%f\n","FFT* Computing",Repetitions,VecSize, t2);
-    // fprintf(Rfile,"%s,%d,%d,%f\n","FFT* Inverse", Repetitions,VecSize, t3);
-
+    fprintf( outFile, "Gflop/s: %9.3f\n", Gflops );
   }
-
-  if (t2 > 0.0) Gflops = 1e-9 * (5.0 * n * log(n) / log(2.0)) / t2;
-  if(doIO) fprintf(Rfile,"%s,%d,%d,%f\n","FFT* Gflops",Repetitions,VecSize, Gflops);
 
   comp_end:
 

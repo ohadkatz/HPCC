@@ -64,7 +64,7 @@ MPIFFT0(HPCC_Params *params, int doIO, FILE *outFile, FILE *Rfile, MPI_Comm comm
 
     p = fftw_mpi_create_plan( comm, n, FFTW_FORWARD, flags );
 
-    if(doIO) fprintf(Rfile,"%s,%d,%d,%f\n","MPIFFT* Tuning", i+1 ,VecSize, t1);
+    if(doIO) fprintf(Rfile,"%s,%d,%d,%f\n","MPIFFT* Tuning", i+1 ,VecSize, t1+MPI_Wtime());
   }
   t1 += MPI_Wtime();
   if (! p) goto no_plan;
@@ -104,17 +104,17 @@ MPIFFT0(HPCC_Params *params, int doIO, FILE *outFile, FILE *Rfile, MPI_Comm comm
   t0 = -MPI_Wtime();
   for(int i = 0 ; i < Repetitions ; i++){
     HPCC_bcnrand( 2 * tls, 53 * commRank * 2 * tls, inout );
-    
-    if(doIO) fprintf(Rfile,"%s,%d,%d,%f\n","MPIFFT* Gen. Time",i+1,VecSize, t0);
+    if(doIO) fprintf(Rfile,"%s,%d,%d,%f\n","MPIFFT* Gen. Time",i+1,VecSize, t0+MPI_Wtime());
   }
   t0 += MPI_Wtime();
 
   t2 = -MPI_Wtime();
   for(int i = 0 ; i < Repetitions ; i++){
-  
- 
     fftw_mpi( p, 1, inout, work );
-    if(doIO) fprintf(Rfile,"%s,%d,%d,%f\n","MPIFFT* Computing", i+1 ,VecSize, t2);
+  
+    if(doIO) fprintf(Rfile,"%s,%d,%d,%f\n","MPIFFT* Computing", i+1 ,VecSize, t2+MPI_Wtime());
+    if (t2+MPI_Wtime() > 0.0) Gflops = 1e-9 * (5.0 * n * log(n) / log(2.0)) /  t2+MPI_Wtime();
+    if(doIO) fprintf(Rfile,"%s,%d,%d,%f\n","MPIFFT* GFLOPS", i+1 ,VecSize,  t2+MPI_Wtime());
   }
   t2 += MPI_Wtime();
   //fftw_mpi_destroy_plan( p );
@@ -127,7 +127,7 @@ MPIFFT0(HPCC_Params *params, int doIO, FILE *outFile, FILE *Rfile, MPI_Comm comm
       
       HPCC_fftw_mpi( ip, 1, inout, work );
       
-      if(doIO) fprintf(Rfile,"%s,%d,%d,%f\n","MPIFFT* Inverse", i+1 ,VecSize, t3);
+      if(doIO) fprintf(Rfile,"%s,%d,%d,%f\n","MPIFFT* Inverse", i+1 ,VecSize, t3+MPI_Wtime());
     }
     t3 += MPI_Wtime();
     HPCC_fftw_mpi_destroy_plan( ip );
@@ -158,12 +158,6 @@ MPIFFT0(HPCC_Params *params, int doIO, FILE *outFile, FILE *Rfile, MPI_Comm comm
     fprintf( outFile, "Inverse FFT: %9.3f\n", t3 );
     fprintf( outFile, "max(|x-x0|): %9.3e\n", maxErr );
     fprintf( outFile, "Gflop/s: %9.3f\n", Gflops );
-    // fprintf(Rfile,"%s,%d,%d,%f\n","MPIFFT* GFLOP",Repetitions,VecSize, Gflops);
-    // fprintf(Rfile,"%s,%d,%d,%f\n","MPIFFT* Gen. Time",Repetitions,VecSize, t0);
-    // fprintf(Rfile,"%s,%d,%d,%f\n","MPIFFT* Tuning",Repetitions,VecSize, t1);
-    // fprintf(Rfile,"%s,%d,%d,%f\n","MPIFFT* Computing",Repetitions,VecSize, t2);
-    // fprintf(Rfile,"%s,%d,%d,%f\n","MPIFFT* Inverse",Repetitions,VecSize, t3);
-    
   }
 
   comp_end:
@@ -212,68 +206,68 @@ HPCC_MPIFFT(HPCC_Params *params) {
   at least twice as many 2 factors as the process count, twice as many
   3 factors and twice as many 5 factors.
   */
-for(int i_vec=0; i_vec<params->FFT_Size;i_vec++){
-  VecSize = params->FFT_UserVector[i_vec];
-  Repetitions = params->FFT_repetitions[i_vec];
-#ifdef HPCC_FFT_235
-  locN = 0; procCnt = commSize + 1;
-  do {
-    int f[3];
+  for(int i_vec=0; i_vec<params->FFT_Size;i_vec++){
+    VecSize = params->FFT_UserVector[i_vec];
+    Repetitions = params->FFT_repetitions[i_vec];
+  #ifdef HPCC_FFT_235
+    locN = 0; procCnt = commSize + 1;
+    do {
+      int f[3];
 
-    procCnt--;
+      procCnt--;
 
-    for ( ; procCnt > 1 && HPCC_factor235( procCnt, f ); procCnt--)
+      for ( ; procCnt > 1 && HPCC_factor235( procCnt, f ); procCnt--)
+        ; /* EMPTY */
+
+      /* Make sure the local vector size is greater than 0 */
+      locN = params->FFT_UserVector[i_vec];
+      for ( ; locN >= 1 && HPCC_factor235( locN, f ); locN--)
+        ; /* EMPTY */
+    } while (locN < 1);
+  #else
+    /* Find power of two that is smaller or equal to number of processes */
+    for (procCnt = 1; procCnt <= (commSize >> 1); procCnt <<= 1)
       ; /* EMPTY */
 
     /* Make sure the local vector size is greater than 0 */
-    locN = params->FFT_UserVector[i_vec];
-    for ( ; locN >= 1 && HPCC_factor235( locN, f ); locN--)
-      ; /* EMPTY */
-  } while (locN < 1);
-#else
-  /* Find power of two that is smaller or equal to number of processes */
-  for (procCnt = 1; procCnt <= (commSize >> 1); procCnt <<= 1)
-    ; /* EMPTY */
+    while (1) {
+      locN = params->FFT_UserVector[i_vec];
+      if (locN) break;
+      procCnt >>= 1;
+    }
+  #endif
 
-  /* Make sure the local vector size is greater than 0 */
-  while (1) {
-    locN = params->FFT_UserVector[i_vec];
-    if (locN) break;
-    procCnt >>= 1;
+    isComputing = commRank < procCnt ? 1 : 0;
+
+    HPCC_fft_timings_forward = params->MPIFFTtimingsForward;
+    HPCC_fft_timings_backward = params->MPIFFTtimingsBackward;
+
+    if (commSize == procCnt)
+      comm = MPI_COMM_WORLD;
+    else
+      MPI_Comm_split( MPI_COMM_WORLD, isComputing ? 0 : MPI_UNDEFINED, commRank, &comm );
+
+    if (isComputing)
+      MPIFFT0( params, doIO, outFile, Rfile, comm, locN, &Gflops, &n, &maxErr, &failure, VecSize, Repetitions );
+
+    if (commSize != procCnt && isComputing && comm != MPI_COMM_NULL)
+      MPI_Comm_free( &comm );
+
+    params->MPIFFT_N = n;
+    params->MPIFFT_Procs = procCnt;
+    params->MPIFFT_maxErr = maxErr;
+
+    MPI_Bcast( &Gflops, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD );
+
+    params->MPIFFTGflops = Gflops;
+
+    params->FFTEnblk = FFTE_NBLK;
+    params->FFTEnp = FFTE_NP;
+    params->FFTEl2size = FFTE_L2SIZE;
+
+    if (failure)
+      params->Failure = 1;
   }
-#endif
-
-  isComputing = commRank < procCnt ? 1 : 0;
-
-  HPCC_fft_timings_forward = params->MPIFFTtimingsForward;
-  HPCC_fft_timings_backward = params->MPIFFTtimingsBackward;
-
-  if (commSize == procCnt)
-    comm = MPI_COMM_WORLD;
-  else
-    MPI_Comm_split( MPI_COMM_WORLD, isComputing ? 0 : MPI_UNDEFINED, commRank, &comm );
-
-  if (isComputing)
-    MPIFFT0( params, doIO, outFile, Rfile, comm, locN, &Gflops, &n, &maxErr, &failure, VecSize, Repetitions );
-
-  if (commSize != procCnt && isComputing && comm != MPI_COMM_NULL)
-    MPI_Comm_free( &comm );
-
-  params->MPIFFT_N = n;
-  params->MPIFFT_Procs = procCnt;
-  params->MPIFFT_maxErr = maxErr;
-
-  MPI_Bcast( &Gflops, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD );
-
-  params->MPIFFTGflops = Gflops;
-
-  params->FFTEnblk = FFTE_NBLK;
-  params->FFTEnp = FFTE_NP;
-  params->FFTEl2size = FFTE_L2SIZE;
-
-  if (failure)
-    params->Failure = 1;
-}
   if (doIO) if (outFile != stderr) fclose( outFile );
   if (doIO) if (Rfile != stderr) fclose( Rfile );
   return 0;

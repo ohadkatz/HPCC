@@ -336,12 +336,12 @@ HPCC_Init(HPCC_Params *params) {
   HPCC_InitHPL( params ); /* HPL calls exit() if there is a problem */
   HPCC_InputFileInit( params );
 
-  params->RunHPL = 0;
-  params->RunStarDGEMM = 0;
-  params->RunParallelDGEMM = 0;
+  params->RunHPL = 1;
+  params->RunStarDGEMM = 1;
+  params->RunParallelDGEMM = 1;
   params->RunPTRANS = 0;
-  params->RunStarStream = 0;
-  params->RunSingleStream = 0;
+  params->RunStarStream = 1;
+  params->RunSingleStream = 1;
   params->RunMPIRandomAccess_LCG = 0;
   params->RunStarRandomAccess_LCG = 0;
   params->RunSingleRandomAccess_LCG = 0;
