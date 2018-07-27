@@ -11,18 +11,22 @@ HPCC_StarStream(HPCC_Params *params) {
   double scaleLocalGBs, scaleMinGBs, scaleMaxGBs, scaleAvgGBs;
   double addLocalGBs, addMinGBs, addMaxGBs, addAvgGBs;
   double triadLocalGBs, triadMinGBs, triadMaxGBs, triadAvgGBs;
+  int VecSize, Repetitions;
   FILE *outputFile;
 
   copyLocalGBs = copyMinGBs = copyMaxGBs = copyAvgGBs =
   scaleLocalGBs = scaleMinGBs = scaleMaxGBs = scaleAvgGBs =
   addLocalGBs = addMinGBs = addMaxGBs = addAvgGBs =
   triadLocalGBs = triadMinGBs = triadMaxGBs = triadAvgGBs = 0.0;
-
+  
   MPI_Comm_size( MPI_COMM_WORLD, &commSize );
   MPI_Comm_rank( MPI_COMM_WORLD, &myRank );
-
-  rv = HPCC_Stream( params, 0 == myRank, MPI_COMM_WORLD, myRank,
-      &copyLocalGBs, &scaleLocalGBs, &addLocalGBs, &triadLocalGBs, &failure );
+  for(int i =0 ; i < params->STREAM_N; i++){
+    VecSize= params->STREAM_UserVector[i];
+    Repetitions= params->STREAM_repetitions[i];
+    rv = HPCC_Stream( params, 0 == myRank, MPI_COMM_WORLD, myRank,
+      &copyLocalGBs, &scaleLocalGBs, &addLocalGBs, &triadLocalGBs, &failure , VecSize, Repetitions);
+  }
   MPI_Reduce( &rv, &errCount, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD );
   MPI_Allreduce( &failure, &failureAll, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
   if (failureAll) params->Failure = 1;
@@ -72,6 +76,7 @@ int
 HPCC_SingleStream(HPCC_Params *params) {
   int myRank, commSize;
   int rv, errCount, rank, failure = 0;
+  int VecSize, Repetitions;
   double copyLocalGBs, scaleLocalGBs, addLocalGBs, triadLocalGBs;
   double scl = 1.0 / RAND_MAX;
   FILE *outputFile;
@@ -94,10 +99,14 @@ HPCC_SingleStream(HPCC_Params *params) {
 
   MPI_Bcast( &rank, 1, MPI_INT, 0, MPI_COMM_WORLD ); /* broadcast the rank selected on node 0 */
 
-  if (myRank == rank) /* if this node has been selected */
-    rv = HPCC_Stream( params, 0 == myRank, MPI_COMM_SELF, myRank,
-        &copyLocalGBs, &scaleLocalGBs, &addLocalGBs, &triadLocalGBs, &failure );
-
+  if (myRank == rank){ /* if this node has been selected */
+    for(int i =0 ; i < params->STREAM_N; i++){
+      VecSize= params->STREAM_UserVector[i];
+      Repetitions= params->STREAM_repetitions[i];
+      rv = HPCC_Stream( params, 0 == myRank, MPI_COMM_SELF, myRank,
+        &copyLocalGBs, &scaleLocalGBs, &addLocalGBs, &triadLocalGBs, &failure, VecSize, Repetitions);
+    }
+  }
   MPI_Bcast( &rv, 1, MPI_INT, rank, MPI_COMM_WORLD ); /* broadcast error code */
   MPI_Bcast( &failure, 1, MPI_INT, rank, MPI_COMM_WORLD ); /* broadcast failure indication */
   if (failure) params->Failure = 1;
