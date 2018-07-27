@@ -107,8 +107,6 @@
  */
 
 static int array_elements;
-# define N 2000000
-
 
 /*
 // Make the scalar coefficient modifiable at compile time.
@@ -176,12 +174,13 @@ static int array_elements;
 
 /* Some compilers require an extra keyword to recognize the "restrict" qualifier. */
 static double * restrict a, * restrict b, * restrict c;
+
 static double avgtime[4] = {0}, maxtime[4] = {0},
-              mintime[4] = {FLT_MAX,FLT_MAX,FLT_MAX,FLT_MAX};
+  mintime[4] = {FLT_MAX,FLT_MAX,FLT_MAX,FLT_MAX};
 
-static char *label[4] = {"Copy:      ", "Scale:     ", "Add:       ", "Triad:     "};
-static char *outputlabel[4] = {"STREAM Copy", "STREAM Scale", "STREAM Add", "STREAM Triad"};
-
+static char *label[4] = {"Copy:      ", "Scale:     ",
+    "Add:       ", "Triad:     "};
+static char *Routputlabel[4] = {"STREAM Copy", "STREAM Scale","STREAM Add", "STREAM Triad"};
 static double bytes[4] = {
     2 * sizeof(double),
     2 * sizeof(double),
@@ -197,7 +196,7 @@ extern void tuned_STREAM_Triad(double scalar);
 #endif
 
 static void
-checkSTREAMresults(FILE *outFile, int doIO, double *AvgErrByRank, int numranks, int *failure, int NTIMES) {
+checkSTREAMresults(FILE *outFile, int doIO, double *AvgErrByRank, int numranks, int *failure, int VecSize, int Repetitions) {
   double aj,bj,cj,scalar;
   double aSumErr,bSumErr,cSumErr;
   double aAvgErr,bAvgErr,cAvgErr;
@@ -213,7 +212,7 @@ checkSTREAMresults(FILE *outFile, int doIO, double *AvgErrByRank, int numranks, 
   aj = 2.0E0 * aj;
   /* now execute timing loop */
   scalar = SCALAR;
-  for (k=0; k< NTIMES; k++) {
+  for (k=0; k<Repetitions; k++) {
     cj = aj;
     bj = scalar*cj;
     cj = aj+bj;
@@ -345,7 +344,7 @@ checktick() {
 For the MPI code I separate the computation of errors from the error
 reporting output functions (which are handled by MPI rank 0).
 */
-void computeSTREAMerrors(double *aAvgErr, double *bAvgErr, double *cAvgErr, int NTIMES)
+void computeSTREAMerrors(double *aAvgErr, double *bAvgErr, double *cAvgErr, int Repetitions)
 {
   double aj,bj,cj,scalar;
   double aSumErr,bSumErr,cSumErr;
@@ -360,7 +359,7 @@ void computeSTREAMerrors(double *aAvgErr, double *bAvgErr, double *cAvgErr, int 
   aj = 2.0E0 * aj;
   /* now execute timing loop */
   scalar = SCALAR;
-  for (k=0; k<NTIMES; k++)
+  for (k=0; k<Repetitions; k++)
   {
       cj = aj;
       bj = scalar*cj;
@@ -385,113 +384,100 @@ void computeSTREAMerrors(double *aAvgErr, double *bAvgErr, double *cAvgErr, int 
 
 int
 HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
-  double *copyGBs, double *scaleGBs, double *addGBs, double *triadGBs, int *failure) {
-  double AvgError[3] = {0.0,0.0,0.0};
-  int quantum,  BytesPerWord, numranks, myrank;
-  int i_vector,j, k;
-  FILE *outFile;
-  FILE *RFile;
-  double *AvgErrByRank;
-  double t0;
-  double gbVector[params->STREAM_N],
-         VectorAvg[params->STREAM_N],
-         VectorMax[params->STREAM_N],
-         VectorMin[params->STREAM_N];
-  
-  if (doIO) {
-    outFile = fopen( params->outFname, "a" );
-    RFile= fopen( params->Results, "a" );
-    if (! outFile) {
-      outFile = stderr;
-      fprintf( outFile, "Cannot open output file.\n" );
-      return 1;
+  double *copyGBs, double *scaleGBs, double *addGBs, double *triadGBs, int *failure, int VectorSize, int Repetitions) {
+    int quantum,  BytesPerWord, numranks, myrank;
+    int j, k;
+    double  scalar, t, t0, t1, times[4][Repetitions], times_copy[4][Repetitions];
+    FILE *outFile;
+    FILE *Rfile;
+    double GiBs = 1024.0 * 1024.0 * 1024.0, curGBs;
+    double AvgError[3] = {0.0,0.0,0.0};
+    double *AvgErrByRank; 
+    int inner_rep = (VectorSize < 2000) ? Repetitions : 1;
+    if (doIO) {
+      outFile = fopen( params->outFname, "a" );
+      Rfile = fopen( params->Results, "a");
+      if (! outFile) {
+        outFile = stderr;
+        fprintf( outFile, "Cannot open output file.\n" );
+        return 1;
+      }
+      if (! Rfile) {
+        outFile = stderr;
+        fprintf( outFile, "Cannot open output file.\n" );
+        return 1;
+      }
     }
-    if (! RFile){
-      RFile = stderr;
-      fprintf( RFile, "Cannot open output file.\n" );
-      return 1;
-    }
-  }
 
-  t0 = MPI_Wtime();
+    t0 = MPI_Wtime();
 
-  MPI_Comm_size( comm, &numranks );
-  MPI_Comm_rank( comm, &myrank );
+    MPI_Comm_size( comm, &numranks );
+    MPI_Comm_rank( comm, &myrank );
 
-  for(i_vector= 0; i_vector < params->STREAM_N; i_vector++){
-    int repetitions= params->STREAM_repetitions[i_vector];
-    double  scalar, t,  t1, times[4][repetitions], times_copy[4][repetitions];
-
-    double GiBs = 1024.0 * 1024.0 * 1024.0, curGBs=0;
-
-
-    array_elements =params->STREAM_UserVector[i_vector]; /* Need 3 vectors */
-
+    array_elements = VectorSize; /* Need 3 vectors */
     params->StreamVectorSize = array_elements;
 
     a = HPCC_XMALLOC( double, array_elements );
     b = HPCC_XMALLOC( double, array_elements );
     c = HPCC_XMALLOC( double, array_elements );
-    
-    array_elements =params->STREAM_UserVector[i_vector]; /* Need 3 vectors */
-    params->StreamVectorSize = array_elements;
 
-    // if (!a || !b || !c) {
-    //   if (c) HPCC_free(c);
-    //   if (b) HPCC_free(b);
-    //   if (a) HPCC_free(a);
-    //   if (doIO) {
-    //     fprintf( outFile, "Failed to allocate memory (%d).\n", array_elements );
-    //     fflush( outFile );
-    //     fclose( outFile );
-    //   }
-    //   /* FIXME: must be made global */
-    //   return 1;
-    // }
+    if (!a || !b || !c) {
+      if (c) HPCC_free(c);
+      if (b) HPCC_free(b);
+      if (a) HPCC_free(a);
+      if (doIO) {
+        fprintf( outFile, "Failed to allocate memory (%d).\n", array_elements );
+        fflush( outFile );
+        fclose( outFile );
+        fflush( Rfile );
+        fclose( Rfile );
+      }
+      /* FIXME: must be made global */
+      return 1;
+    }
 
     /* --- SETUP --- determine precision and check timing --- */
-    
-    if (doIO) {
-      fprintf( outFile, HLINE);
-      BytesPerWord = sizeof(double);
-      fprintf( outFile, "This system uses %d bytes per DOUBLE PRECISION word.\n",
-              BytesPerWord);
 
-      fprintf( outFile, HLINE);
-      fprintf( outFile, "Array size = %d, Offset = %d\n" , array_elements, OFFSET);
-      fprintf( outFile, "Total memory required = %.4f GiB.\n",
-              (3.0 * BytesPerWord) * ( (double) array_elements / GiBs));
-      fprintf( outFile, "Each test is run %d times.\n", repetitions );
-      fprintf( outFile, " The *best* time for each kernel (excluding the first iteration)\n" );
-      fprintf( outFile, " will be used to compute the reported bandwidth.\n");
-      fprintf( outFile, "The SCALAR value used for this run is %f\n", SCALAR );
+    if (doIO) {
+    fprintf( outFile, HLINE);
+    BytesPerWord = sizeof(double);
+    fprintf( outFile, "This system uses %d bytes per DOUBLE PRECISION word.\n",
+             BytesPerWord);
+
+    fprintf( outFile, HLINE);
+    fprintf( outFile, "Array size = %d, Offset = %d\n" , array_elements, OFFSET);
+    fprintf( outFile, "Total memory required = %.4f GiB.\n",
+             (3.0 * BytesPerWord) * ( (double) array_elements / GiBs));
+    fprintf( outFile, "Each test is run %d times.\n", Repetitions );
+    fprintf( outFile, " The *best* time for each kernel (excluding the first iteration)\n" );
+    fprintf( outFile, " will be used to compute the reported bandwidth.\n");
+    fprintf( outFile, "The SCALAR value used for this run is %f\n", SCALAR );
 
     }
 
-  
-    #ifdef _OPENMP
-        if (doIO) fprintf( outFile, HLINE);
-    #pragma omp parallel private(k)
-        {
-    #pragma omp single nowait
-          {
-            k = omp_get_num_threads();
-            if (doIO) fprintf( outFile, "Number of Threads requested = %i\n",k);
-            params->StreamThreads = k;
-          }
-        }
-    #endif
+#ifdef _OPENMP
+    if (doIO) fprintf( outFile, HLINE);
+#pragma omp parallel private(k)
+    {
+#pragma omp single nowait
+      {
+        k = omp_get_num_threads();
+        if (doIO) fprintf( outFile, "Number of Threads requested = %i\n",k);
+        params->StreamThreads = k;
+      }
+    }
+#endif
 
     /* --- SETUP --- initialize arrays and estimate precision of timer --- */
 
-    #ifdef _OPENMP
-    #pragma omp parallel for
-    #endif
-        for (j=0; j<4; j++) {
-          a[j] = 1.0;
-          b[j] = 2.0;
-          c[j] = 0.0;
-        }
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+    for (j=0; j<array_elements; j++) {
+      a[j] = 1.0;
+      b[j] = 2.0;
+      c[j] = 0.0;
+    }
 
     /* Rank 0 needs to allocate arrays to hold error data and timing data from
        all ranks for analysis and output.
@@ -502,7 +488,7 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
     /* There are 3 average error values for each rank (using double). */
     AvgErrByRank = HPCC_XMALLOC( double, 3 * numranks );
 
-    /* There are 4*NTIMES timing values for each rank (always doubles) */
+    /* There are 4*Repetitions timing values for each rank (always doubles) */
     if (AvgErrByRank == NULL) {
       if (doIO)
         fprintf( outFile, "Ooops -- allocation of arrays to collect timing data on MPI rank %d failed\n", world_rank);
@@ -525,10 +511,11 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
     /* Get initial timing estimate to compare to timer granularity.
        All ranks need to run this code since it changes the values in array `a' */
     t = MPI_Wtime();
-    #ifdef _OPENMP
-    #pragma omp parallel for
-    #endif
-    for (j = 0; j < array_elements; j++) a[j] = 2.0E0 * a[j];
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+    for (j = 0; j < array_elements; j++)
+      a[j] = 2.0E0 * a[j];
     t = 1.0E6 * (MPI_Wtime() - t);
 
     if (doIO) {
@@ -550,195 +537,175 @@ HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
     fprintf( outFile, HLINE);
     }
 
-    /* --- MAIN LOOP --- repeat test cases NTIMES times --- */
+    /* --- MAIN LOOP --- repeat test cases Repetitions times --- */
 
     /* This code has more barriers and timing calls than are actually needed, but
        this should not cause a problem for arrays that are large enough to satisfy
        the STREAM run rules. */
 
-   
     scalar = SCALAR;
-    double repetitions_inner;
-    for (k=0; k < repetitions; k++) {
-      /* kernel 1: Copy */
-      MPI_Barrier( comm );
-      repetitions_inner=1;
-      if (array_elements < 2048)
-        repetitions_inner=repetitions;
-      times[0][k] = MPI_Wtime();
-      for(int i=0; i< repetitions_inner; i++){
-        #ifdef TUNED
-        tuned_STREAM_Copy();
-        #else
-        #ifdef _OPENMP
-        #pragma omp parallel for
-        #endif
-        for (j=0; j<array_elements; j++)
-          c[j] = a[j];
-        #endif
+    for (k=0; k<Repetitions; k++) {
+        /* kernel 1: Copy */
         MPI_Barrier( comm );
-      }
-      times[0][k] = ((MPI_Wtime() - times[0][k])/repetitions_inner);
+        times[0][k] = MPI_Wtime();
+        for(int i= 0; i<inner_rep; i++){
+#ifdef TUNED
+          tuned_STREAM_Copy();
+#else
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+          for (j=0; j<array_elements; j++)
+            c[j] = a[j];
+#endif
+          MPI_Barrier( comm );
+        }
+        times[0][k] = (MPI_Wtime() - times[0][k])/inner_rep;
 
-      /* kernel 2: Scale */
-      MPI_Barrier( comm );
-      times[1][k] = MPI_Wtime();
-      for(int i=0; i< repetitions_inner; i++){
+        /* kernel 2: Scale */
+        MPI_Barrier( comm );
+        times[1][k] = MPI_Wtime();
+        for(int i= 0; i<inner_rep; i++){
+#ifdef TUNED
+          tuned_STREAM_Scale(scalar);
+#else
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+          for (j=0; j<array_elements; j++)
+            b[j] = scalar*c[j];
+#endif
+          MPI_Barrier( comm );
+        }
+        times[1][k] = (MPI_Wtime() - times[1][k])/inner_rep;
+
+        /* kernel 3: Add */
+        MPI_Barrier( comm );
+        times[2][k] = MPI_Wtime();
+        for(int i= 0; i<inner_rep; i++){
         
-        #ifdef TUNED
-        tuned_STREAM_Scale(scalar);
-        #else
-        #ifdef _OPENMP
-        #pragma omp parallel for
-        #endif
-        for (j=0; j<array_elements; j++)
-          b[j] = scalar*c[j];
-        #endif
+#ifdef TUNED
+          tuned_STREAM_Add();
+#else
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+          for (j=0; j<array_elements; j++)
+            c[j] = a[j]+b[j];
+#endif
         MPI_Barrier( comm );
-      }
-      times[1][k] =((MPI_Wtime() - times[1][k])/repetitions_inner);
-    
-      /* kernel 3: Add */
-      MPI_Barrier( comm );
-      times[2][k] = MPI_Wtime();
-      for(int i=0; i< repetitions_inner; i++){
-        #ifdef TUNED
-        tuned_STREAM_Add();
-        #else
-        #ifdef _OPENMP
-        #pragma omp parallel for
-        #endif
-        for (j=0; j < array_elements; j++)
-          c[j] = a[j]+b[j];
-        #endif
-        MPI_Barrier( comm );
-      }
-      times[2][k] = ((MPI_Wtime() - times[2][k])/repetitions_inner);
+        }
+        times[2][k] = (MPI_Wtime() - times[2][k])/inner_rep;
 
-      /* kernel 4: Triad */
-      MPI_Barrier( comm );
-      times[3][k] = MPI_Wtime();
-      for(int i=0; i< repetitions_inner; i++){
-        #ifdef TUNED
-        tuned_STREAM_Triad(scalar);
-        #else
-        #ifdef _OPENMP
-        #pragma omp parallel for
-        #endif
-        for (j=0; j<array_elements; j++)
-        a[j] = b[j]+scalar*c[j];
-        #endif
+        /* kernel 4: Triad */
         MPI_Barrier( comm );
-      }
-      times[3][k] = ((MPI_Wtime() - times[3][k])/repetitions_inner);
+        times[3][k] = MPI_Wtime();
+        for(int i= 0; i<inner_rep; i++){
+#ifdef TUNED
+          tuned_STREAM_Triad(scalar);
+#else
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+          for (j=0; j<array_elements; j++)
+            a[j] = b[j]+scalar*c[j];
+#endif
+          MPI_Barrier( comm );
+        }
+        times[3][k] = (MPI_Wtime() - times[3][k])/inner_rep;
     }
-    
+
     t0 = MPI_Wtime();
-    
+
     /* --- SUMMARY --- */
 
     /* Because of the MPI_Barrier() calls, the timings from any thread are equally valid.
-      The best estimate of the maximum performance is the minimum of the "outside the barrier"
-      timings across all the MPI ranks. */
+       The best estimate of the maximum performance is the minimum of the "outside the barrier"
+       timings across all the MPI ranks. */
 
     memcpy(times_copy, times, sizeof times_copy );
-  
+
     /* for each iteration and each kernel, collect the minimum time across all MPI ranks */
-    MPI_Allreduce( times_copy, times, 4*repetitions, MPI_DOUBLE, MPI_MIN, comm );
-    
-    /* Back to the original code, but now using the minimum global timing across all ranks */
-    for (j=0; j<4; j++)
-    {
-      avgtime[j] = 0.0;
-      mintime[j] = times[j][1];
-      maxtime[j] = times[j][1];
-      
+    MPI_Allreduce( times_copy, times, 4*Repetitions, MPI_DOUBLE, MPI_MIN, comm );
+
+    for(j=0; j<4; j++){
+      avgtime[j]=0.0;
+      mintime[j]=times[j][1];
+      maxtime[j]=times[j][1];
     }
-    for (k=1; k<repetitions; k++) /* note -- skip first iteration */
+    /* Back to the original code, but now using the minimum global timing across all ranks */
+    for (k=1; k<Repetitions; k++) /* note -- skip first iteration */
     {
       for (j=0; j<4; j++)
       {
         avgtime[j] = avgtime[j] + times[j][k];
         mintime[j] = Mmin(mintime[j], times[j][k]);
         maxtime[j] = Mmax(maxtime[j], times[j][k]);
-        gbVector[j] = (mintime[j] > 0.0 ? 1.0 / mintime[j] : -1.0); 
-        gbVector[j] *= 1e-9 * bytes[j] * array_elements;
-        fprintf(RFile,"%s,%d,%d,%f\n",outputlabel[j], k, params->STREAM_UserVector[i_vector], gbVector[j]);
-        
+        curGBs = (mintime[j] > 0.0 ? 1.0 / mintime[j] : -1.0);
+        curGBs *= 1e-9 * bytes[j] * array_elements;
+         if (doIO) fprintf(Rfile,"%s,%d,%d,%f\n", Routputlabel[j] ,k , VectorSize, curGBs);
       }
     }
-    
+
     if (doIO)
       fprintf( outFile, "Function      Rate (GB/s)   Avg time     Min time     Max time\n");
-    
     for (j=0; j<4; j++) {
-      
-      avgtime[j] /= (double)(repetitions - 1); /* note -- skip first iteration */
+      avgtime[j] /= (double)(Repetitions - 1); /* note -- skip first iteration */
+
       /* make sure no division by zero */
-      gbVector[j] = (mintime[j] > 0.0 ? 1.0 / mintime[j] : -1.0);
-
-      gbVector[j] *= 1e-9 * bytes[j] * array_elements;
-      VectorAvg[j]= avgtime[j];
-      VectorMax[j]= maxtime[j];
-      VectorMin[j]= mintime[j];
-      
-
-        
-      if (doIO){
-        fprintf( outFile, "%s%11.4f  %11.4f  %11.4f  %11.4f\n", 
-                label[j],
-                gbVector[j],
-                VectorAvg[j],
-                VectorMin[j],
-                VectorMax[j]);
-        
-      }
-
+      curGBs = (mintime[j] > 0.0 ? 1.0 / mintime[j] : -1.0);
+      curGBs *= 1e-9 * bytes[j] * array_elements;
+      if (doIO)
+        fprintf( outFile, "%s%11.4f  %11.4f  %11.4f  %11.4f\n", label[j],
+                 curGBs,
+                 avgtime[j],
+                 mintime[j],
+                 maxtime[j]);
       switch (j) {
-        case 0: *copyGBs = gbVector[j]; break;
-        case 1: *scaleGBs = gbVector[j]; break;
-        case 2: *addGBs = gbVector[j]; break;
-        case 3: *triadGBs = gbVector[j]; break;
+        case 0: *copyGBs = curGBs; break;
+        case 1: *scaleGBs = curGBs; break;
+        case 2: *addGBs = curGBs; break;
+        case 3: *triadGBs = curGBs; break;
       }
     }
-  
     if (doIO)
       fprintf( outFile, HLINE);
 
     /* --- Every Rank Checks its Results --- */
-    computeSTREAMerrors(&AvgError[0], &AvgError[1], &AvgError[2], repetitions);
+    computeSTREAMerrors(&AvgError[0], &AvgError[1], &AvgError[2], Repetitions);
     /* --- Collect the Average Errors for Each Array on Rank 0 --- */
     MPI_Gather(AvgError, 3, MPI_DOUBLE, AvgErrByRank, 3, MPI_DOUBLE, 0, comm);
-    
+
     /* -- Combined averaged errors and report on Rank 0 only --- */
     if (myrank == 0) {
-      checkSTREAMresults( outFile, doIO, AvgErrByRank, numranks, failure, repetitions );
+      checkSTREAMresults( outFile, doIO, AvgErrByRank, numranks, failure, VectorSize, Repetitions);
       if (doIO) fprintf( outFile, HLINE);
     }
-  
-        
+
     HPCC_free(AvgErrByRank);
+
     HPCC_free(c);
     HPCC_free(b);
     HPCC_free(a);
-  }
-  if (doIO) {
-    fflush( outFile );
-    fclose( outFile );
-    fflush(RFile);
-    fclose(RFile);
-  }
-  return 0;
+
+    if (doIO) {
+      fflush( outFile );
+      fclose( outFile );
+      fflush( Rfile );
+      fclose( Rfile );
+    }
+
+    return 0;
 }
 
 void tuned_STREAM_Copy()
 {
   int j;
-  #ifdef _OPENMP
-  #pragma omp parallel for
-  #endif
-  for (j=0; j<array_elements; j++)
-      c[j] = a[j];
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+        for (j=0; j<array_elements; j++)
+            c[j] = a[j];
 }
 
 void tuned_STREAM_Scale(double scalar)
