@@ -185,7 +185,7 @@ extern int MaxMem(int nprocs, int imrow, int imcol, int nmat, int *mval, int *nv
   int *mbval, int *nbval, int ngrids, int *npval, int *nqval, long *maxMem);
 extern int HPCC_Stream(HPCC_Params *params, int doIO, MPI_Comm comm, int world_rank,
   double *copyGBs, double *scaleGBs, double *addGBs, double *triadGBs,
-  int *failure);
+  int *failure, int VectorSize, int Repetitions );
 extern void main_bench_lat_bw(HPCC_Params *params);
 
 extern int pdtrans(char *trans, int *m, int *n, int * mb, int *nb, double *a, int *lda,
