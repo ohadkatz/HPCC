@@ -82,7 +82,7 @@ HPLlib       = $(LIBdir)/libhpl.a
 # header files,  MPlib  is defined  to be the name of  the library to be 
 # used. The variable MPdir is only used for defining MPinc and MPlib.
 #q
-MPdir        = /home/ohadkatz/intel/impi/2018.2.199/include64/
+MPdir        = /opt/intel/impi/2018.3.222/include64/
 MPinc        = 
 MPlib        = 
 
@@ -96,8 +96,8 @@ MPlib        =
 # used. The variable LAdir is only used for defining LAinc and LAlib.
 # ${MKLROOT}/lib/intel64/libmkl_scalapack_ilp64.a
 
-INTELLIBS = /home/ohadkatz/intel/compilers_and_libraries_2018.2.199/linux/compiler/lib/intel64
-MKLROOT=     /home/ohadkatz/intel/mkl
+INTELLIBS = /opt/intel/compilers_and_libraries_2018.3.222/linux/compiler/lib/intel64
+MKLROOT=     /opt/intel/mkl
 LAdir        = ${MKLROOT}/lib/
 LAinc        = -I${MKLROOT}/include -I${MKLROOT}/include/fftw
 LAlib        =  -L${INTELLIBS} \
@@ -184,7 +184,7 @@ HPL_DEFS     = $(F2CDEFS) $(HPL_OPTS) $(HPL_INCLUDES)
 #
 CC           = mpicc
 CCNOOPT      = $(HPL_DEFS) 
-CCFLAGS      = $(HPL_DEFS) -g  -O3
+CCFLAGS      = $(HPL_DEFS) -g -std=c99 -O3
 #
 LINKER       = mpicc
 LINKFLAGS    = 
